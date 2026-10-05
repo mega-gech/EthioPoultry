@@ -1,6 +1,6 @@
-# HenEthio – Ethiopian Poultry & Egg Marketplace
+# EthioPoultry – Ethiopian Poultry & Egg Marketplace
 
-HenEthio is a web-based marketplace designed to connect poultry farmers, egg sellers, buyers, and agricultural service providers across Ethiopia.
+EthioPoultry is a web-based marketplace designed to connect poultry farmers, egg sellers, buyers, and agricultural service providers across Ethiopia.
 
 The platform aims to make it easier for users to discover poultry products, compare prices, find local sellers, and connect directly with suppliers.
 
