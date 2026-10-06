@@ -1,6 +1,6 @@
 function Footer() {
   return (
-    <footer className="bg-green-700 text-white">
+    <footer className="bg-green-800 text-white">
 
       {/* =====================================================
           MAIN FOOTER
@@ -300,7 +300,7 @@ function Footer() {
       {/* =====================================================
           BOTTOM BAR
       ====================================================== */}
-      <div className="border-t border-white/10 bg-green-800">
+      <div className="border-t border-white/10 bg-green-900">
 
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-3 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
 
