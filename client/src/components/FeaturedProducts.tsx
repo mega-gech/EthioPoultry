@@ -139,7 +139,7 @@ function FeaturedProducts() {
             {/* =========================================
                 STATISTICS
             ========================================== */}
-            <div className="mt-4 rounded-lg border border-green-100 bg-green-50/40 px-3 py-4">
+            <div className="mt-12 rounded-lg border border-green-100 bg-green-50/40 px-3 py-4">
 
               <div className="grid grid-cols-2 sm:grid-cols-4">
 
