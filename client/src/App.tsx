@@ -2,6 +2,7 @@ import Topbar from "./components/Topbar";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero"
 import Features from "./components/Features"
+import FeaturedProducts from "./components/FeaturedProducts";
 
 function App() {
   return (
@@ -10,10 +11,9 @@ function App() {
       <Navbar />
       <Hero />
       <Features />
+      <FeaturedProducts />
 
-      <main>
-        <h1>HenEthio Homepage</h1>
-      </main>
+     
     </>
   );
 }
