@@ -50,15 +50,14 @@ function Navbar() {
           { element.scrollIntoView({
             behavior: "smooth",
             block: "start", });
-            } 
-             return; }
+            } return; }
 
-            navigate("/");
-               setTimeout(() => { 
-                const element = document.getElementById(sectionId);
-                 if (element)
-                   { element.scrollIntoView({
-                     behavior: "smooth", block: "start", }); } },300)
+      navigate("/");
+      setTimeout(() => { 
+            const element = document.getElementById(sectionId);
+              if (element)
+              { element.scrollIntoView({
+              behavior: "smooth", block: "start", }); } },300)
 }
 
 
