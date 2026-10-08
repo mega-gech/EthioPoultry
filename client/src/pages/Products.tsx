@@ -1,10 +1,14 @@
 import { useState } from "react";
 import Topbar from "../components/Topbar";
 import Navbar from "../components/Navbar";
+
 import freshEggs30 from "../assets/EthioPoultry_Product_Images/01_fresh_eggs_30pcs.jpg";
 import localChicken from "../assets/EthioPoultry_Product_Images/02_local_chicken.jpg";
 import dayOldChicks from "../assets/EthioPoultry_Product_Images/03_day_old_chicks.jpg";
 import freshEggs60 from "../assets/EthioPoultry_Product_Images/04_fresh_eggs_60pcs.jpg";
+import promoGuide from "../assets/EthioPoultry_Product_Images/06_poultry_farming_guide.jpg"
+import veterinaryKit from "../assets/EthioPoultry_Product_Images/07_poultry_health_kit.jpg"
+
 
 type Product = {
   id: number;
@@ -48,6 +52,40 @@ const products: Product[] = [
     location: "Addis Ababa",
     category: "Eggs",
   },
+
+  // Second row
+  {
+    id: 5,
+    image: localChicken,
+    name: "Fresh Eggs (10 pcs)",
+    price: "120 ETB",
+    location: "Sebeta",
+    category: "Eggs",
+  },
+  {
+    id: 6,
+    image: promoGuide,
+    name: "Poultry Feed (50kg)",
+    price: "1,200 ETB",
+    location: "Adama",
+    category: "Feed",
+  },
+  {
+    id: 7,
+    image: dayOldChicks,
+    name: "Chick Starter (25kg)",
+    price: "950 ETB",
+    location: "Hawassa",
+    category: "Feed",
+  },
+  {
+    id: 8,
+    image: veterinaryKit,
+    name: "Veterinary Kit",
+    price: "750 ETB",
+    location: "Addis Ababa",
+    category: "Medicine",
+  },
 ];
 
 function Products() {
@@ -69,19 +107,15 @@ function Products() {
     <Navbar />
     <main className="min-h-screen bg-[#f3fbfa]">
 
-      {/* =====================================================
-          PRODUCTS PAGE
-      ====================================================== */}
       <div className="mx-auto max-w-[1280px] px-4 py-5 sm:px-6 lg:px-8">
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[225px_minmax(0,1fr)]">
 
           {/* =================================================
-              LEFT FILTER SIDEBAR
+              FILTER SIDEBAR
           ================================================== */}
           <aside className="h-fit rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
 
-            {/* Filter Header */}
             <div className="flex items-center gap-2 border-b border-gray-200 pb-3">
 
               <svg
@@ -169,6 +203,7 @@ function Products() {
                   <option>Debre Markos</option>
                   <option>Hawassa</option>
                   <option>Mekelle</option>
+
                 </select>
 
                 <svg
@@ -189,7 +224,7 @@ function Products() {
 
             </div>
 
-            {/* Price Range */}
+            {/* Price */}
             <div className="mt-5">
 
               <h3 className="mb-3 text-xs font-bold text-gray-700">
@@ -244,11 +279,11 @@ function Products() {
           </aside>
 
           {/* =================================================
-              RIGHT CONTENT
+              PRODUCTS CONTENT
           ================================================== */}
           <section>
 
-            {/* PAGE TITLE */}
+            {/* Header */}
             <div>
 
               <h1 className="text-2xl font-bold text-gray-800">
@@ -261,7 +296,7 @@ function Products() {
 
             </div>
 
-            {/* SEARCH + FILTER TOOLBAR */}
+            {/* Search / Filters */}
             <div className="mt-3 grid grid-cols-1 gap-2.5 md:grid-cols-[minmax(0,1fr)_150px_150px_160px]">
 
               {/* Search */}
@@ -407,7 +442,7 @@ function Products() {
                     className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                   >
 
-                    {/* IMAGE */}
+                    {/* Image */}
                     <div className="relative h-[120px] bg-gray-100">
 
                       <img
@@ -439,15 +474,13 @@ function Products() {
 
                     </div>
 
-                    {/* CARD CONTENT */}
+                    {/* Content */}
                     <div className="p-2.5">
 
-                      {/* Product Name */}
                       <h2 className="truncate text-[12px] font-bold text-gray-800">
                         {product.name}
                       </h2>
 
-                      {/* Price */}
                       <p className="mt-1 text-sm font-bold text-green-600">
                         {product.price}
                       </p>
@@ -456,7 +489,7 @@ function Products() {
                       <div className="mt-1 flex items-center gap-1 text-[10px] text-gray-500">
 
                         <svg
-                          className="h-3 w-3 text-green-600"
+                          className="h-3 w-3 shrink-0 text-gray-400"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -491,10 +524,9 @@ function Products() {
 
                       </div>
 
-                      {/* ACTION BUTTONS */}
+                      {/* Buttons */}
                       <div className="mt-2 grid grid-cols-2 gap-2">
 
-                        {/* Call */}
                         <button className="flex h-7 items-center justify-center gap-1 rounded-md bg-green-600 text-[9px] font-semibold text-white transition hover:bg-green-700">
 
                           <svg
@@ -509,7 +541,6 @@ function Products() {
 
                         </button>
 
-                        {/* WhatsApp */}
                         <button className="flex h-7 items-center justify-center gap-1 rounded-md border border-green-500 bg-white text-[9px] font-semibold text-green-600 transition hover:bg-green-50">
 
                           <svg
