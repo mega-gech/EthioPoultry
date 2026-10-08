@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate, useLocation } from 'react-router-dom';
 import logo from "../assets/hen_logo.png";
 import {
   Menu,
@@ -10,16 +11,24 @@ import {
 
 function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   const navLinks = [
-    { name: "Home", href: "#" },
-    { name: "Marketplace", href: "#marketplace" },
+    { name: "Home", href: "/" },
+    { name: "Products", href: "#products" },
     { name: "About Us", href: "#about" },
     { name: "Learn", href: "#learn" },
     { name: "Health & Tips", href: "#health" },
     { name: "Market Prices", href: "#prices" },
     { name: "Contact", href: "#contact" },
   ];
+
+const handleNavLinks = (href: string)=>{
+  if(href==="#products"){
+     navigate("#products")
+  }
+}
+
 
   return (
     <nav className="border-b border-gray-200 bg-white shadow-sm">
