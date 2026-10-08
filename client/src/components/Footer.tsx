@@ -1,6 +1,6 @@
 function Footer() {
   return (
-    <footer className="bg-green-900 text-white">
+    <footer className="bg-green-900 text-white " id="contact">
 
       {/* =====================================================
           MAIN FOOTER

@@ -12,6 +12,7 @@ import {
 function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -30,7 +31,8 @@ function Navbar() {
   e.preventDefault();
   setIsMenuOpen(false)
 
-  if (href === "/") { navigate("/"); 
+  if (href === "/") {
+     navigate("/"); 
      window.scrollTo({
        top: 0,
        behavior: "smooth", }); 
@@ -39,11 +41,25 @@ function Navbar() {
   if (!href.startsWith("/#")) 
     { navigate(href); 
       return; }
+
+    const sectionId = href.replace("/#", "");
+
+    if (location.pathname === "/") 
+      { const element = document.getElementById(sectionId);
+         if (element) 
+          { element.scrollIntoView({
+            behavior: "smooth",
+            block: "start", });
+            } 
+             return; }
+
+            navigate("/");
+               setTimeout(() => { 
+                const element = document.getElementById(sectionId);
+                 if (element)
+                   { element.scrollIntoView({
+                     behavior: "smooth", block: "start", }); } },300)
 }
-
-
-
-
 
 
   return (
