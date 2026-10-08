@@ -15,19 +15,35 @@ function Navbar() {
 
   const navLinks = [
     { name: "Home", href: "/" },
-    { name: "Products", href: "#products" },
-    { name: "About Us", href: "#about" },
-    { name: "Learn", href: "#learn" },
-    { name: "Health & Tips", href: "#health" },
-    { name: "Market Prices", href: "#prices" },
-    { name: "Contact", href: "#contact" },
+    { name: "Products", href: "/products" },
+    { name: "About Us", href: "/#about" },
+    { name: "Learn", href: "/#learn" },
+    { name: "Health & Tips", href: "/#health" },
+    { name: "Market Prices", href: "/#prices" },
+    { name: "Contact", href: "/#contact" },
   ];
 
-const handleNavLinks = (href: string)=>{
-  if(href==="#products"){
-     navigate("#products")
-  }
+  const handleNavClick = (
+  e: React.MouseEvent<HTMLAnchorElement>,
+  href: string
+) => {
+  e.preventDefault();
+  setIsMenuOpen(false)
+
+  if (href === "/") { navigate("/"); 
+     window.scrollTo({
+       top: 0,
+       behavior: "smooth", }); 
+       return; }
+
+  if (!href.startsWith("/#")) 
+    { navigate(href); 
+      return; }
 }
+
+
+
+
 
 
   return (
@@ -88,6 +104,7 @@ const handleNavLinks = (href: string)=>{
                 <a
                   key={link.name}
                   href={link.href}
+                  onClick={(e) => handleNavClick(e, link.href)}
                   className={`relative py-7 text-sm font-medium transition ${
                     index === 0
                       ? "text-green-800"
