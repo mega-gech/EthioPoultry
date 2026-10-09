@@ -95,6 +95,7 @@ const navigate = useNavigate();
               {products.map((product) => (
                 <div
                   key={product.id}
+                 // onClick={() => navigate(`/products/${product.id}`)}
                   className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
                 >
 
@@ -130,7 +131,7 @@ const navigate = useNavigate();
                       </button>
 
                       <button 
-                      onClick={(e) => { e.stopPropagation(); navigate(`/product/${product.id}`); }}
+                      onClick={() =>  navigate(`/products/${product.id}`) }
                       className="flex-1 rounded-md border border-gray-200 bg-white px-1 py-1.5 text-[9px] font-semibold text-green-700 hover:bg-green-50 sm:text-[10px]">
                          
                         View Details
