@@ -7,6 +7,8 @@ import eggBasket from "../assets/06_egg_basket.jpg";
 import farmBrochure from "../assets/07_farm_brochure.jpg";
 import veterinaryKit from "../assets/08_veterinary_kit.jpg";
 
+import { useNavigate } from "react-router-dom";
+
 const products = [
   {
     id: 1,
@@ -62,6 +64,8 @@ const statistics = [
 ];
 
 function FeaturedProducts() {
+const navigate = useNavigate();
+
   return (
     <section className="bg-white py-6">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -125,7 +129,10 @@ function FeaturedProducts() {
                         WhatsApp
                       </button>
 
-                      <button className="flex-1 rounded-md border border-gray-200 bg-white px-1 py-1.5 text-[9px] font-semibold text-green-700 hover:bg-green-50 sm:text-[10px]">
+                      <button 
+                      onClick={(e) => { e.stopPropagation(); navigate(`/product/${product.id}`); }}
+                      className="flex-1 rounded-md border border-gray-200 bg-white px-1 py-1.5 text-[9px] font-semibold text-green-700 hover:bg-green-50 sm:text-[10px]">
+                         
                         View Details
                       </button>
 
