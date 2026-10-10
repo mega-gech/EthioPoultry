@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import eggTray from "../assets/02_egg_tray.jpg";
 import brownHen from "../assets/03_brown_hen.jpg";
@@ -94,6 +95,7 @@ const products: Product[] = [
 type TabName = "Description" | "Specifications" | "Seller Info";
 
 export default function ProductDetails() {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const product = products.find((item) => item.id === Number(id));
 
@@ -251,7 +253,7 @@ export default function ProductDetails() {
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={handleCall}
+                onClick={()=>navigate(`/sellerProfile/${product.id}`)}
                 className="flex items-center justify-center gap-2 rounded-md bg-green-700 px-3 py-3 text-sm font-semibold text-white transition hover:bg-green-800"
               >
                 <span>☎</span>
