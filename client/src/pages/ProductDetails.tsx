@@ -11,6 +11,7 @@ import eggBasket from "../assets/06_egg_basket.jpg";
 
 type Product = {
   id: number;
+  sellerId:number;
   name: string;
   image: string;
   location: string;
@@ -28,6 +29,7 @@ type Product = {
 const products: Product[] = [
   {
     id: 1,
+    sellerId:1234,
     name: "Fresh Eggs (30 pcs)",
     image: eggTray,
     location: "Addis Ababa",
@@ -44,6 +46,7 @@ const products: Product[] = [
   },
   {
     id: 2,
+    sellerId:1236,
     name: "Brown Layer Chicken",
     image: brownHen,
     location: "Addis Ababa",
@@ -60,6 +63,7 @@ const products: Product[] = [
   },
   {
     id: 3,
+    sellerId:1237,
     name: "White Layer Chicken",
     image: whiteHens,
     location: "Addis Ababa",
@@ -76,6 +80,7 @@ const products: Product[] = [
   },
   {
     id: 4,
+    sellerId:1239,
     name: "Eggs (60 pcs)",
     image: stackedEggTrays,
     location: "Addis Ababa",
@@ -128,10 +133,7 @@ export default function ProductDetails() {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  const handleCall = () => {
-    // Replace this placeholder with the seller's real phone number.
-    window.location.href = "tel:+251900000000";
-  };
+ 
 
   return (
     <main className="min-h-screen bg-white">
@@ -253,7 +255,7 @@ export default function ProductDetails() {
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={()=>navigate(`/sellerProfile/${product.id}`)}
+                onClick={()=>navigate(`/sellerProfile/${product.sellerId}`)}
                 className="flex items-center justify-center gap-2 rounded-md bg-green-700 px-3 py-3 text-sm font-semibold text-white transition hover:bg-green-800"
               >
                 <span>☎</span>
@@ -262,7 +264,7 @@ export default function ProductDetails() {
 
               <button
                 type="button"
-                onClick={handleWhatsApp}
+                onClick={()=>navigate(`/sellerProfile/${product.sellerId}`)}
                 className="flex items-center justify-center gap-2 rounded-md bg-green-600 px-3 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
               >
                 <span>◉</span>
@@ -272,7 +274,7 @@ export default function ProductDetails() {
 
             <button
               type="button"
-              onClick={handleWhatsApp}
+              onClick={()=>navigate(`/sellerProfile/${product.sellerId}`)}
               className="mt-3 w-full rounded-md border border-green-700 bg-white px-4 py-3 text-sm font-semibold text-green-800 transition hover:bg-green-50"
             >
               Contact Seller
