@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import logoHen from '../assets/logo_hen.jpg'
 import { Link } from "react-router-dom";
 import {
   Eye,
@@ -29,7 +30,7 @@ export default function Login() {
         {/* Left image panel */}
         <div className="relative hidden min-h-[600px] md:block">
           <img
-            src="/images/login-hen.jpg"
+            src={logoHen}
             alt="Hen and fresh eggs on a poultry farm"
             className="absolute inset-0 h-full w-full object-cover"
           />
