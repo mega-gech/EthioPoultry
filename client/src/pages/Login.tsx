@@ -2,6 +2,7 @@
 import { useState } from "react";
 import logoHen from '../assets/logo_hen.jpg'
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Eye,
   EyeOff,
@@ -14,6 +15,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const navigate = useNavigate()
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -155,6 +157,7 @@ export default function Login() {
             {/* Login button */}
             <button
               type="submit"
+              onClick={()=>navigate('/buyerprofile')}
               className="w-full rounded-lg bg-green-700 py-3 font-semibold text-white transition hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
             >
               Login

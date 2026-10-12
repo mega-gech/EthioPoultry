@@ -5,6 +5,7 @@ import ProductDetails from './pages/ProductDetails';
 import SellerProfile from './pages/SellerProfile';
 import Login from './pages/Login'
 import Register from './pages/Register'
+import BuyerProfile from "./pages/BuyerProfile";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path='/sellerProfile/:id' element={<SellerProfile />}/>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/buyerprofile" element={<BuyerProfile />} />
       </Routes>
      
     </Router>
