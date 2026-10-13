@@ -5,7 +5,7 @@ import ProductDetails from './pages/ProductDetails';
 import SellerProfile from './pages/SellerProfile';
 import Login from './pages/Login'
 import Register from './pages/Register'
-import BuyerProfile from "./pages/BuyerProfile";
+import BuyerProfile from "./pages/buyerProfile/BuyerProfile";
 
 function App() {
   return (
