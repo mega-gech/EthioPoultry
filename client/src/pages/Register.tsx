@@ -1,7 +1,7 @@
  
 import { useState } from "react";
 import logoHen from '../assets/logo_hen.jpg'
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   UserRound,
   Mail,
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 export default function Register() {
-  const navigate = useNavigate();
+ 
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
