@@ -12,6 +12,7 @@ import {
   Menu,
   Bell,
 } from "lucide-react";
+import DashboardStats from "./DashboardStats";
 
 const navigation = [
   { name: "Dashboard", icon: LayoutDashboard, href: "/seller/dashboard" },
@@ -140,19 +141,8 @@ export default function SellerDashboard() {
             Here is what is happening with your poultry business today.
           </p>
 
-          <div className="mt-8 rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
-            <LayoutDashboard
-              size={40}
-              className="mx-auto text-emerald-700"
-            />
-
-            <h3 className="mt-4 font-semibold text-gray-800">
-              Your dashboard starts here
-            </h3>
-
-            <p className="mt-2 text-sm text-gray-500">
-              Next, we will add the summary cards and recent products.
-            </p>
+          <div className="mt-8">
+             <DashboardStats />
           </div>
         </section>
       </main>

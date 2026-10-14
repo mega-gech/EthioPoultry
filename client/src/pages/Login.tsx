@@ -173,6 +173,7 @@ export default function Login() {
 
           <div className="grid grid-cols-2 gap-3">
             <button
+              onClick={()=>navigate('/seller/dashboard')}
               type="button"
               className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
