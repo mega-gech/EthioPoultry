@@ -11,6 +11,7 @@ import BuyerOrders from './pages/buyerProfile/BuyerOrders';
 import BuyerFavorites from './pages/buyerProfile/BuyerFavorites';
 import BuyerSettings from './pages/buyerProfile/BuyerSettings';
 import SellerDashboard from "./pages/SellerDashboard/SellerDashboard";
+import SellerProducts from './pages/SellerDashboard/SellerProducts';
 
 function App() {
   return (
@@ -28,6 +29,9 @@ function App() {
         <Route path='/buyer/favorites' element={<BuyerFavorites/>} />
         <Route path='/buyer/settings' element={<BuyerSettings />} />
         <Route  path="/seller/dashboard"  element={<SellerDashboard />} />
+        <Route  path="/seller/products"  element={<SellerProducts />}
+/>
+
       </Routes>
      
     </Router>
