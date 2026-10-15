@@ -13,10 +13,10 @@ import BuyerSettings from './pages/buyerProfile/BuyerSettings';
 import SellerDashboard from "./pages/SellerDashboard/SellerDashboard";
 import SellerProducts from './pages/SellerDashboard/SellerProducts';
 import AddProduct from './pages/SellerDashboard/AddProduct';
+import EditProduct from './pages/SellerDashboard/EditProduct';
 
 function App() {
   return (
-    <Router>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/products" element = {<Products/>} />
@@ -32,11 +32,8 @@ function App() {
         <Route  path="/seller/dashboard"  element={<SellerDashboard />} />
         <Route  path="/seller/products"  element={<SellerProducts />} />
         <Route  path="/seller/products/add"  element={<AddProduct />} />
-
-
+        <Route  path="/seller/products/edit/:id"  element={<EditProduct />}/>
       </Routes>
-     
-    </Router>
   );
 }
 
