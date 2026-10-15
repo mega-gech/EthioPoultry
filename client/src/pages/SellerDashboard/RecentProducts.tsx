@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Pencil, Trash2, Package, Plus } from "lucide-react";
+import { useProducts } from "../../context/ProductContext";
+
 
 import eggTray from "../../assets/02_egg_tray.jpg";
 import brownHen from "../../assets/03_brown_hen.jpg";
@@ -42,8 +44,11 @@ const initialProducts: Product[] = [
 export default function RecentProducts() {
   const navigate = useNavigate();
 
-  const [products, setProducts] =
-    useState<Product[]>(initialProducts);
+ 
+ const { products, deleteProduct } = useProducts();
+
+ const recentProducts = products.slice(0, 5);
+
 
   const handleDelete = (id: number) => {
     const confirmed = window.confirm(
@@ -51,10 +56,7 @@ export default function RecentProducts() {
     );
 
     if (!confirmed) return;
-
-    setProducts((currentProducts) =>
-      currentProducts.filter((product) => product.id !== id)
-    );
+     deleteProduct(id)
   };
 
   return (
@@ -105,7 +107,7 @@ export default function RecentProducts() {
           </thead>
 
           <tbody className="divide-y divide-gray-100">
-            {products.map((product) => (
+            {recentProducts.map((product) => (
               <tr
                 key={product.id}
                 className="transition hover:bg-gray-50"

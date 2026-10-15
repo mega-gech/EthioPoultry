@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-
+import { useProducts } from "../../context/ProductContext";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -19,8 +19,9 @@ type ProductFilter = "All" | "Active" | "Out of Stock";
 export default function SellerProducts() {
   const navigate = useNavigate();
 
-  const [products, setProducts] =
-    useState<Product[]>(initialProducts);
+
+const { products, deleteProduct } = useProducts();
+
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ProductFilter>("All");
@@ -36,17 +37,17 @@ export default function SellerProducts() {
     return matchesSearch && matchesFilter;
   });
 
-  const handleDelete = (id: number) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this product?"
-    );
+  
+function handleDelete(id: number) {
+  const confirmed = window.confirm(
+    "Are you sure you want to delete this product?"
+  );
 
-    if (confirmed) {
-      setProducts((current) =>
-        current.filter((product) => product.id !== id)
-      );
-    }
-  };
+  if (confirmed) {
+    deleteProduct(id);
+  }
+}
+
 
   const activeCount = products.filter(
     (product) => product.status === "Active"

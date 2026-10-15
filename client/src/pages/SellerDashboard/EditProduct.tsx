@@ -2,18 +2,15 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ImagePlus } from "lucide-react";
-
+import { useProducts } from "../../context/ProductContext";
 import { products } from "../../data/products";
 import type { Product } from "../../data/products";
 
 export default function EditProduct() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
-  const product = products.find(
-    (item) => String(item.id) === id
-  );
-
+  const { products, updateProduct } = useProducts();
+  const product = products.find((item) => item.id === Number(id));
   const [name, setName] = useState(product?.name ?? "");
   const [price, setPrice] = useState(
     product ? String(product.price) : ""
@@ -60,52 +57,61 @@ export default function EditProduct() {
     );
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError("");
+ function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
 
-    const numericPrice = Number(price);
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("Could not read the image."));
+      }
+    };
 
-    if (!name.trim() || !category || !description.trim()) {
-      setError("Please complete all required fields.");
-      return;
-    }
+    reader.onerror = () => reject(new Error("Could not read the image."));
+    reader.readAsDataURL(file);
+  });
+}
 
-    if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
-      setError("Enter a valid price greater than zero.");
-      return;
-    }
+  
+ async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  e.preventDefault();
 
-    if (!quantity.trim() || !location.trim()) {
-      setError("Quantity and location are required.");
-      return;
-    }
+  if (!product) return;
 
-    if (image && image.size > 5 * 1024 * 1024) {
-      setError("The image must be 5 MB or smaller.");
-      return;
-    }
+  if (!name.trim() || !price || !quantity || !category || !location.trim()) {
+    alert("Please complete all required fields.");
+    return;
+  }
 
-    // Temporary demonstration: prepare the updated product.
-    // The next integration step will persist this through shared state/API.
+  try {
+    const imageUrl = image
+      ? await fileToDataUrl(image)
+      : product.image;
+
     const updatedProduct: Product = {
       ...product,
       name: name.trim(),
-      price: numericPrice,
-      quantity: quantity.trim(),
+      price: Number(price),
+      quantity: `${quantity} pcs`,
       category,
       description: description.trim(),
       location: location.trim(),
-      status,
-      image: image ? URL.createObjectURL(image) : product.image,
+      image: imageUrl,
+      images: imageUrl
+        ? [imageUrl, ...product.images.filter((url) => url !== product.image)]
+        : product.images,
     };
 
-    console.log("Updated product preview:", updatedProduct);
+    updateProduct(updatedProduct);
+    alert("Product updated successfully!");
+    navigate("/seller/products");
+  } catch {
+    alert("Could not read the selected image. Please try again.");
+  }
+}
 
-    alert(
-      "Form validated. Permanent saving is not connected yet."
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">

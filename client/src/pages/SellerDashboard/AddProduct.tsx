@@ -7,11 +7,35 @@ import {
   X,
 } from "lucide-react";
 
+import { useProducts } from "../../context/ProductContext";
+import type { FormEvent } from "react";
+import type { Product } from "../../data/products";
+
+
 type ProductCategory = "Eggs" | "Chickens" | "Equipment" | "Feed";
+
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("Could not read the image."));
+      }
+    };
+
+    reader.onerror = () => reject(new Error("Could not read the image."));
+    reader.readAsDataURL(file);
+  });
+}
+
 
 export default function AddProduct() {
   const navigate = useNavigate();
-
+  const { addProduct } = useProducts();
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -35,36 +59,46 @@ export default function AddProduct() {
     return () => URL.revokeObjectURL(imageUrl);
   }, [image]);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError("");
-    setSuccess(false);
+  
+async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  e.preventDefault();
 
-    if (!category) {
-      setError("Please select a product category.");
-      return;
-    }
+  if (!name.trim() || !price || !quantity || !category || !location.trim()) {
+    alert("Please complete all required fields.");
+    return;
+  }
 
-    if (Number(price) <= 0 || !Number.isFinite(Number(price))) {
-      setError("Enter a valid price greater than zero.");
-      return;
-    }
+  try {
+    const imageUrl = image
+      ? await fileToDataUrl(image)
+      : "";
 
-    if (Number(quantity) <= 0 || !Number.isFinite(Number(quantity))) {
-      setError("Enter a valid quantity greater than zero.");
-      return;
-    }
+    const newProduct: Product = {
+      id: Date.now(),
+      sellerId: 1234,
+      name: name.trim(),
+      image: imageUrl,
+      location: location.trim(),
+      price: Number(price),
+      quantity: `${quantity} pcs`,
+      category,
+      description: description.trim(),
+      seller: "Abebe Poultry Farm",
+      rating: 0,
+      reviews: 0,
+      sellerProducts: 0,
+      images: imageUrl ? [imageUrl] : [],
+      status: "Active",
+    };
 
-    if (!image) {
-      setError("Please upload a product image.");
-      return;
-    }
+    addProduct(newProduct);
+    alert("Product added successfully!");
+    navigate("/seller/products");
+  } catch {
+    alert("Could not read the selected image. Please try again.");
+  }
+}
 
-    setSuccess(true);
-
-    // This is a frontend demonstration only.
-    // Later, submit the form to your backend API.
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
