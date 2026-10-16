@@ -1,16 +1,20 @@
-import { useState } from "react";
-import { useNavigate, useLocation } from 'react-router-dom';
-import logo from "../assets/hen_logo.png";
+
+import { useEffect, useState } from "react";
+import type { MouseEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Menu,
   X,
   UserRound,
   Plus,
+  ChevronRight,
 } from "lucide-react";
 
+import logo from "../assets/hen_logo.png";
 
 function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -24,162 +28,172 @@ function Navbar() {
     { name: "Contact", href: "/#contact" },
   ];
 
+  // Close the mobile menu whenever the route changes.
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname, location.hash]);
+
+  // Scroll after the Home page and its sections have rendered.
+  useEffect(() => {
+    if (location.pathname !== "/") return;
+
+    const frame = window.requestAnimationFrame(() => {
+      if (location.hash) {
+        const sectionId = location.hash.slice(1);
+        const element = document.getElementById(sectionId);
+
+        element?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      } else {
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [location.pathname, location.hash]);
+
+  // Handle desktop and mobile navigation consistently.
   const handleNavClick = (
-  e: React.MouseEvent<HTMLAnchorElement>,
-  href: string
-) => {
-  e.preventDefault();
-  setIsMenuOpen(false)
+    e: MouseEvent<HTMLAnchorElement>,
+    href: string
+  ) => {
+    e.preventDefault();
+    setIsMenuOpen(false);
+    navigate(href);
+  };
 
-  if (href === "/") {
-     navigate("/"); 
-     window.scrollTo({
-       top: 0,
-       behavior: "smooth", }); 
-       return; }
+  // Determine which link should appear active.
+  const isActive = (href: string) => {
+    if (href === "/") {
+      return (
+        location.pathname === "/" &&
+        !location.hash
+      );
+    }
 
-  if (!href.startsWith("/#")) 
-    { navigate(href); 
-      return; }
+    if (href === "/products") {
+      return (
+        location.pathname === "/products" ||
+        location.pathname.startsWith("/product/")
+      );
+    }
 
-    const sectionId = href.replace("/#", "");
+    if (href.startsWith("/#")) {
+      return (
+        location.pathname === "/" &&
+        location.hash === href.slice(1)
+      );
+    }
 
-    if (location.pathname === "/") 
-      { const element = document.getElementById(sectionId);
-         if (element) 
-          { element.scrollIntoView({
-            behavior: "smooth",
-            block: "start", });
-            } return; }
+    return location.pathname === href;
+  };
 
-      navigate("/");
-      setTimeout(() => { 
-            const element = document.getElementById(sectionId);
-              if (element)
-              { element.scrollIntoView({
-              behavior: "smooth", block: "start", }); } },300)
-}
+  // Shared login navigation for both layouts.
+  const handleLogin = () => {
+    setIsMenuOpen(false);
+    navigate("/login");
+  };
 
+  // Temporary destination until the create-listing route is ready.
+  const handlePostAd = () => {
+    setIsMenuOpen(false);
+    navigate("/seller/products/add");
+  };
 
   return (
-    <nav className="border-b border-gray-200 bg-white shadow-sm">
+    <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
-        {/* ================================================= */}
-        {/* DESKTOP / MAIN NAVBAR */}
-        {/* ================================================= */}
+        {/* Main navbar */}
+        <div className="flex min-h-[76px] items-center justify-between gap-4">
 
-        <div className="flex h-15 items-center justify-between">
-
-          {/* ================= LOGO ================= */}
-
+          {/* Brand / Logo */}
           <a
-            href="#"
-            className="flex items-center "
-           >
-
-            {/*Ethiopoltry Logo */}
-            <div className="flex h-14 w-14 items-center justify-center">
+            href="/"
+            onClick={(e) => handleNavClick(e, "/")}
+            aria-label="Enqulalie home"
+            className="flex shrink-0 items-center gap-2"
+          >
             <img
-            src={logo}
-            alt="Ethiohen - Your Poultry Partner"
-            className="h-[65px] w-auto object-contain"
+              src={logo}
+              alt="Enqulalie chicken logo"
+              className="h-12 w-12 object-contain sm:h-14 sm:w-14"
             />
-            </div>
 
-            {/* Logo Text */}
             <div className="leading-tight">
-
-              <div className="text-[16px] font-bold tracking-tight sm:text-3xl">
-                <span className="text-green-800">
-                  Ethio
-                </span>
-
-                <span className="text-orange-500">
-                  Poultry
-                </span>
+              <div className="text-xl font-extrabold tracking-tight sm:text-2xl">
+                <span className="text-green-800">Enqu</span>
+                <span className="text-orange-500">lalie</span>
               </div>
 
-              <p className="text-xs text-gray-600 sm:text-sm">
+              <p className="mt-1 text-[10px] text-gray-500 sm:text-xs">
                 Your Poultry Partner
               </p>
-
             </div>
-
           </a>
 
+          {/* Desktop navigation */}
+          <div className="hidden flex-1 items-center justify-center lg:flex">
+            <div className="flex items-center gap-1 xl:gap-2">
+              {navLinks.map((link) => {
+                const active = isActive(link.href);
 
-          {/* ================= DESKTOP NAVIGATION ================= */}
+                return (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    onClick={(e) =>
+                      handleNavClick(e, link.href)
+                    }
+                    aria-current={active ? "page" : undefined}
+                    className={`relative whitespace-nowrap rounded-lg px-2 py-3 text-[13px] font-semibold transition-colors xl:px-2.5 xl:text-sm ${
+                      active
+                        ? "bg-green-50 text-green-800"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-green-800"
+                    }`}
+                  >
+                    {link.name}
 
-          <div className="hidden items-center lg:flex">
-
-            <div className="flex items-center gap-4">
-
-              {navLinks.map((link, index) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  onClick={(e) => handleNavClick(e, link.href)}
-                  className={`relative py-7 text-sm font-medium transition ${
-                    index === 0
-                      ? "text-green-800"
-                      : "text-gray-800 hover:text-green-700"
-                  }`}
-                >
-
-                  {link.name}
-
-                  {/* Active Home underline */}
-                  {index === 0 && (
-                    <span className="absolute bottom-0 left-0 h-[3px] w-full rounded-full bg-green-800" />
-                  )}
-
-                </a>
-              ))}
-
+                    {active && (
+                      <span className="absolute inset-x-2 -bottom-1 h-[3px] rounded-full bg-green-700" />
+                    )}
+                  </a>
+                );
+              })}
             </div>
-
           </div>
 
+          {/* Desktop actions */}
+          <div className="hidden shrink-0 items-center gap-2 xl:gap-3 lg:flex">
 
-          {/* ================= DESKTOP ACTIONS ================= */}
-
-          <div className="hidden items-center gap-3 lg:flex">
-
-            {/* Login */}
             <button
               type="button"
-              onClick={()=>navigate('/login')}
-              className="flex items-center gap-2 whitespace-nowrap rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-800 transition hover:border-green-700 hover:text-green-700"
+              onClick={handleLogin}
+              className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-green-700 hover:bg-green-50 hover:text-green-800 xl:px-4"
             >
-              <UserRound size={18} />
-
-              <span>
-                Login / Register
-              </span>
+              <UserRound size={17} />
+              Login / Register
             </button>
 
-
-            {/* Post an Ad */}
             <button
               type="button"
-              className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-green-800"
+              onClick={handlePostAd}
+              className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg bg-green-700 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-green-800 hover:shadow-md xl:px-4"
             >
-              <span>
-                Post an Ad
-              </span>
+              Post an Ad
 
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-green-700">
                 <Plus size={14} strokeWidth={3} />
               </span>
-
             </button>
-
           </div>
 
-
-          {/* ================= MOBILE MENU BUTTON ================= */}
-
+          {/* Mobile menu toggle */}
           <button
             type="button"
             aria-label={
@@ -188,86 +202,80 @@ function Navbar() {
                 : "Open navigation menu"
             }
             aria-expanded={isMenuOpen}
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 lg:hidden"
+            aria-controls="mobile-navigation"
+            onClick={() => setIsMenuOpen((open) => !open)}
+            className="rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-700 lg:hidden"
           >
-
             {isMenuOpen ? (
-              <X size={28} />
+              <X size={26} />
             ) : (
-              <Menu size={28} />
+              <Menu size={26} />
             )}
-
           </button>
-
         </div>
 
-
-        {/* ================================================= */}
-        {/* MOBILE MENU */}
-        {/* ================================================= */}
-
+        {/* Mobile navigation */}
         {isMenuOpen && (
-          <div className="border-t border-gray-100 pb-5 lg:hidden">
+          <div
+            id="mobile-navigation"
+            className="border-t border-gray-100 pb-5 lg:hidden"
+          >
+            <div className="flex flex-col gap-1 pt-3">
+              {navLinks.map((link) => {
+                const active = isActive(link.href);
 
-            {/* Navigation links */}
-            <div className="flex flex-col pt-3">
+                return (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    onClick={(e) =>
+                      handleNavClick(e, link.href)
+                    }
+                    aria-current={active ? "page" : undefined}
+                    className={`flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold transition ${
+                      active
+                        ? "bg-green-50 text-green-800"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-green-800"
+                    }`}
+                  >
+                    {link.name}
 
-              {navLinks.map((link, index) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  onClick={() => setIsMenuOpen(false)}
-                  className={`border-b border-gray-100 px-2 py-3.5 text-sm font-medium transition ${
-                    index === 0
-                      ? "text-green-800"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-green-700"
-                  }`}
-                >
-                  {link.name}
-                </a>
-              ))}
-
+                    {active && (
+                      <ChevronRight
+                        size={17}
+                        className="text-green-700"
+                      />
+                    )}
+                  </a>
+                );
+              })}
             </div>
 
-
             {/* Mobile actions */}
-            <div className="mt-4 flex flex-col gap-3">
-
-              {/* Login */}
+            <div className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4">
               <button
                 type="button"
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 text-sm font-medium text-gray-800 transition hover:border-green-700 hover:text-green-700"
+                onClick={handleLogin}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-green-700 hover:bg-green-50 hover:text-green-800"
               >
                 <UserRound size={18} />
-
-                <span>
-                  Login / Register
-                </span>
+                Login / Register
               </button>
 
-
-              {/* Post an Ad */}
               <button
                 type="button"
+                onClick={handlePostAd}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-800"
               >
-
-                <span>
-                  Post an Ad
-                </span>
+                Post an Ad
 
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-green-700">
                   <Plus size={14} strokeWidth={3} />
                 </span>
-
               </button>
-
             </div>
-
           </div>
         )}
-
       </div>
     </nav>
   );
