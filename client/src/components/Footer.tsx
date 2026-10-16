@@ -238,7 +238,7 @@ const Footer = () => {
                     href="mailto:info@ethiopoultry.com"
                     className="mt-1 break-all text-sm text-green-100/85 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-300"
                   >
-                    info@ethiopoultry.com
+                    info@enqulalie.com
                   </a>
                 </div>
               </div>
@@ -254,7 +254,7 @@ const Footer = () => {
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-4 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
 
           <p className="text-xs leading-5 text-green-100/75">
-            © {new Date().getFullYear()} EthioPoultry. All rights reserved.
+            © {new Date().getFullYear()} Enqulalie. All rights reserved.
           </p>
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
