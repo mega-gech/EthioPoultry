@@ -107,10 +107,10 @@ function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-md">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+     <div className="mx-auto w-full max-w-7xl px-3 sm:px-5 lg:px-6 xl:px-8">
 
         {/* Main navbar */}
-        <div className="flex min-h-[76px] items-center justify-between gap-4">
+        <div className="flex min-h-[68px] items-center justify-between gap-2 sm:min-h-[72px] lg:gap-3">
 
           {/* Brand / Logo */}
           <a
@@ -122,16 +122,16 @@ function Navbar() {
             <img
               src={logo}
               alt="Enqulalie chicken logo"
-              className="h-12 w-12 object-contain sm:h-14 sm:w-14"
+              className="h-10 w-10 shrink-0 object-contain sm:h-12 sm:w-12 lg:h-14 lg:w-14"
             />
 
             <div className="leading-tight">
-              <div className="text-xl font-extrabold tracking-tight sm:text-2xl">
+              <div className="text-lg font-extrabold tracking-tight sm:text-xl lg:text-2xl">
                 <span className="text-green-800">Enqu</span>
                 <span className="text-orange-500">lalie</span>
               </div>
 
-              <p className="mt-1 text-[10px] text-gray-500 sm:text-xs">
+               <p className="mt-1 text-[9px] text-gray-500 sm:text-[10px] lg:text-xs">
                 Your Poultry Partner
               </p>
             </div>
