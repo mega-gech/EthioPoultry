@@ -60,7 +60,7 @@ export default function Login() {
             className="absolute left-8 top-8 z-10 rounded-md text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-300"
           >
             <span className="text-3xl font-extrabold tracking-tight">
-              Ethio<span className="text-lime-300">Poultry</span>
+              Enqu<span className="text-lime-300">lalie</span>
             </span>
 
             <span className="mt-1 block text-sm text-green-50">
@@ -76,7 +76,7 @@ export default function Login() {
             </span>
 
             <h1 className="mt-5 text-3xl font-bold leading-tight lg:text-4xl">
-              Welcome Back to EthioPoultry
+              Welcome Back to Enqulalie
             </h1>
 
             <p className="mt-4 max-w-sm text-sm leading-6 text-green-50 sm:text-base">
@@ -94,7 +94,7 @@ export default function Login() {
             to="/"
             className="mb-7 inline-block text-center text-2xl font-extrabold tracking-tight text-green-800 md:hidden"
           >
-            Ethio<span className="text-green-500">Poultry</span>
+            Enqu<span className="text-green-500">lalie</span>
           </Link>
 
           {/* Heading */}
