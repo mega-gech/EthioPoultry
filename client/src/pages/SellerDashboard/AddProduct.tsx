@@ -1,19 +1,30 @@
 
 import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   ImagePlus,
   X,
+  PackagePlus,
+  MapPin,
+  Tag,
+  LoaderCircle,
 } from "lucide-react";
 
 import { useProducts } from "../../context/ProductContext";
-import type { FormEvent } from "react";
 import type { Product } from "../../data/products";
 
-
 type ProductCategory = "Eggs" | "Chickens" | "Equipment" | "Feed";
+type QuantityUnit = "pcs" | "tray" | "kg" | "bag";
 
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+const inputClass =
+  "w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100";
+
+const labelClass =
+  "mb-1.5 block text-sm font-medium text-gray-700";
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -23,29 +34,34 @@ function fileToDataUrl(file: File): Promise<string> {
       if (typeof reader.result === "string") {
         resolve(reader.result);
       } else {
-        reject(new Error("Could not read the image."));
+        reject(new Error("Could not read the selected image."));
       }
     };
 
-    reader.onerror = () => reject(new Error("Could not read the image."));
+    reader.onerror = () => {
+      reject(new Error("Could not read the selected image."));
+    };
+
     reader.readAsDataURL(file);
   });
 }
 
-
 export default function AddProduct() {
   const navigate = useNavigate();
   const { addProduct } = useProducts();
+
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [unit, setUnit] = useState<QuantityUnit>("pcs");
   const [category, setCategory] = useState<ProductCategory | "">("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("Addis Ababa");
+
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!image) {
@@ -59,336 +75,422 @@ export default function AddProduct() {
     return () => URL.revokeObjectURL(imageUrl);
   }, [image]);
 
-  
-async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-  e.preventDefault();
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
 
-  if (!name.trim() || !price || !quantity || !category || !location.trim()) {
-    alert("Please complete all required fields.");
-    return;
+    if (
+      !name.trim() ||
+      !price ||
+      !quantity ||
+      !category ||
+      !description.trim() ||
+      !location.trim() ||
+      !image
+    ) {
+      setError("Please complete all required fields and upload an image.");
+      return;
+    }
+
+    const numericPrice = Number(price);
+    const numericQuantity = Number(quantity);
+
+    if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
+      setError("Enter a valid price greater than zero.");
+      return;
+    }
+
+    if (
+      !Number.isSafeInteger(numericQuantity) ||
+      numericQuantity <= 0
+    ) {
+      setError("Quantity must be a positive whole number.");
+      return;
+    }
+
+    if (image.size > MAX_IMAGE_SIZE) {
+      setError("Image must be 5 MB or smaller.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const imageUrl = await fileToDataUrl(image);
+
+      const newProduct: Product = {
+        id: Date.now(),
+        sellerId: 1234,
+        name: name.trim(),
+        sellerPhone:"wdmkfwe",
+        image: imageUrl,
+        location: location.trim(),
+        price: numericPrice,
+        quantity: `${numericQuantity} ${unit}`,
+        category,
+        description: description.trim(),
+        seller: "Abebe Poultry Farm",
+        rating: "0",
+        reviews: 0,
+        sellerProducts: 0,
+        images: [imageUrl],
+        status: "Active",
+      };
+
+      await addProduct(newProduct);
+
+      navigate("/seller/products", {
+        state: { message: "Product added successfully!" },
+      });
+    } catch {
+      setError(
+        "Could not add the product. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
-
-  try {
-    const imageUrl = image
-      ? await fileToDataUrl(image)
-      : "";
-
-    const newProduct: Product = {
-      id: Date.now(),
-      sellerId: 1234,
-      name: name.trim(),
-      image: imageUrl,
-      location: location.trim(),
-      price: Number(price),
-      quantity: `${quantity} pcs`,
-      category,
-      description: description.trim(),
-      seller: "Abebe Poultry Farm",
-      rating: 0,
-      reviews: 0,
-      sellerProducts: 0,
-      images: imageUrl ? [imageUrl] : [],
-      status: "Active",
-    };
-
-    addProduct(newProduct);
-    alert("Product added successfully!");
-    navigate("/seller/products");
-  } catch {
-    alert("Could not read the selected image. Please try again.");
-  }
-}
-
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
+    <div className="min-h-screen bg-gray-50 px-3 py-5 sm:px-6 sm:py-7">
       <div className="mx-auto max-w-3xl">
+        {/* Back navigation */}
         <button
           type="button"
           onClick={() => navigate("/seller/products")}
-          className="mb-5 flex items-center gap-2 text-sm text-gray-500 hover:text-emerald-700"
+          className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-emerald-700"
         >
           <ArrowLeft size={17} />
           Back to My Products
         </button>
 
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Add New Product
-          </h1>
-          <p className="mt-2 text-sm text-gray-500">
-            Add your poultry products to the EthioPoultry marketplace.
-          </p>
+        {/* Page heading */}
+        <div className="mb-5 flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+            <PackagePlus size={23} />
+          </div>
+
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
+              Add New Product
+            </h1>
+
+            <p className="mt-1 text-sm text-gray-500">
+              List your poultry products on the EthioPoultry marketplace.
+            </p>
+          </div>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="space-y-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-7"
+          className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
         >
-          {/* Product name */}
-          <div>
-            <label
-              htmlFor="productName"
-              className="mb-2 block text-sm font-medium text-gray-700"
-            >
-              Product Name *
-            </label>
-            <input
-              id="productName"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Fresh Eggs (30 pcs)"
-              required
-              maxLength={100}
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-            />
-          </div>
+          <div className="space-y-6 p-4 sm:p-6">
+            {/* Basic information */}
+            <section className="space-y-4">
+              <div className="border-b border-gray-100 pb-3">
+                <h2 className="text-base font-semibold text-gray-900">
+                  Basic Information
+                </h2>
+                <p className="mt-1 text-xs text-gray-500">
+                  Enter the product name and pricing details.
+                </p>
+              </div>
 
-          {/* Price and quantity */}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <div>
-              <label
-                htmlFor="productPrice"
-                className="mb-2 block text-sm font-medium text-gray-700"
-              >
-                Price (ETB) *
-              </label>
-              <input
-                id="productPrice"
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="240"
-                required
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="productQuantity"
-                className="mb-2 block text-sm font-medium text-gray-700"
-              >
-                Quantity *
-              </label>
-              <input
-                id="productQuantity"
-                type="number"
-                min="1"
-                step="1"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                placeholder="30"
-                required
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Enter the number of units available.
-              </p>
-            </div>
-          </div>
-
-          {/* Quantity unit */}
-          <div>
-            <label
-              htmlFor="quantityUnit"
-              className="mb-2 block text-sm font-medium text-gray-700"
-            >
-              Quantity Unit *
-            </label>
-            <select
-              id="quantityUnit"
-              required
-              defaultValue="pcs"
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-600"
-              onChange={(e) => {
-                // The selected unit is included in the form's quantity field
-                // in a later backend integration.
-              }}
-            >
-              <option value="pcs">Pieces (pcs)</option>
-              <option value="tray">Tray</option>
-              <option value="kg">Kilograms (kg)</option>
-              <option value="bag">Bag</option>
-            </select>
-          </div>
-
-          {/* Category */}
-          <div>
-            <label
-              htmlFor="productCategory"
-              className="mb-2 block text-sm font-medium text-gray-700"
-            >
-              Category *
-            </label>
-            <select
-              id="productCategory"
-              value={category}
-              onChange={(e) =>
-                setCategory(e.target.value as ProductCategory | "")
-              }
-              required
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-600"
-            >
-              <option value="">Select a category</option>
-              <option value="Eggs">Eggs</option>
-              <option value="Chickens">Chickens</option>
-              <option value="Equipment">Poultry Equipment</option>
-              <option value="Feed">Poultry Feed</option>
-            </select>
-          </div>
-
-          {/* Location */}
-          <div>
-            <label
-              htmlFor="productLocation"
-              className="mb-2 block text-sm font-medium text-gray-700"
-            >
-              Product Location *
-            </label>
-            <input
-              id="productLocation"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              required
-              placeholder="e.g. Addis Ababa"
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label
-              htmlFor="productDescription"
-              className="mb-2 block text-sm font-medium text-gray-700"
-            >
-              Product Description *
-            </label>
-            <textarea
-              id="productDescription"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the quality, features, and details of your product..."
-              rows={5}
-              maxLength={1500}
-              required
-              className="w-full resize-y rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-            />
-            <p className="mt-1 text-right text-xs text-gray-400">
-              {description.length}/1500
-            </p>
-          </div>
-
-          {/* Image upload */}
-          <div>
-            <label
-              htmlFor="productImage"
-              className="mb-2 block text-sm font-medium text-gray-700"
-            >
-              Product Image *
-            </label>
-
-            <label
-              htmlFor="productImage"
-              className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 p-6 text-center transition hover:border-emerald-600 hover:bg-emerald-50/50"
-            >
-              {preview ? (
-                <img
-                  src={preview}
-                  alt="Product preview"
-                  className="max-h-56 rounded-lg object-contain"
+              <div>
+                <label htmlFor="productName" className={labelClass}>
+                  Product Name *
+                </label>
+                <input
+                  id="productName"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Fresh Eggs (30 pcs)"
+                  maxLength={100}
+                  autoComplete="off"
+                  required
+                  className={inputClass}
                 />
-              ) : (
-                <>
-                  <ImagePlus
-                    size={36}
-                    className="text-emerald-700"
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="productPrice" className={labelClass}>
+                    Price (ETB) *
+                  </label>
+                  <input
+                    id="productPrice"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="e.g. 240"
+                    required
+                    className={inputClass}
                   />
-                  <p className="mt-3 text-sm font-medium text-gray-700">
-                    Click to upload an image
+                  <p className="mt-1 text-xs text-gray-400">
+                    Price per listed quantity.
                   </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    PNG, JPG, or WEBP. Maximum 5 MB.
-                  </p>
-                </>
-              )}
-            </label>
+                </div>
 
-            <input
-              id="productImage"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              required={!image}
-              className="sr-only"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
+                <div>
+                  <label htmlFor="productCategory" className={labelClass}>
+                    Category *
+                  </label>
+                  <select
+                    id="productCategory"
+                    value={category}
+                    onChange={(e) =>
+                      setCategory(e.target.value as ProductCategory | "")
+                    }
+                    required
+                    className={inputClass}
+                  >
+                    <option value="">Select category</option>
+                    <option value="Eggs">Eggs</option>
+                    <option value="Chickens">Chickens</option>
+                    <option value="Equipment">Poultry Equipment</option>
+                    <option value="Feed">Poultry Feed</option>
+                  </select>
+                </div>
+              </div>
 
-                if (!file) return;
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="productQuantity" className={labelClass}>
+                    Available Quantity *
+                  </label>
+                  <input
+                    id="productQuantity"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    placeholder="e.g. 30"
+                    required
+                    className={inputClass}
+                  />
+                </div>
 
-                if (file.size > 5 * 1024 * 1024) {
-                  setError("Image must be 5 MB or smaller.");
-                  e.target.value = "";
-                  setImage(null);
-                  return;
-                }
+                <div>
+                  <label htmlFor="quantityUnit" className={labelClass}>
+                    Quantity Unit *
+                  </label>
+                  <select
+                    id="quantityUnit"
+                    value={unit}
+                    onChange={(e) =>
+                      setUnit(e.target.value as QuantityUnit)
+                    }
+                    required
+                    className={inputClass}
+                  >
+                    <option value="pcs">Pieces (pcs)</option>
+                    <option value="tray">Tray</option>
+                    <option value="kg">Kilograms (kg)</option>
+                    <option value="bag">Bag</option>
+                  </select>
+                </div>
+              </div>
+            </section>
 
-                setError("");
-                setImage(file);
-              }}
-            />
+            {/* Location */}
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <MapPin size={18} className="text-emerald-700" />
+                <h2 className="text-base font-semibold text-gray-900">
+                  Location
+                </h2>
+              </div>
 
-            {image && (
-              <button
-                type="button"
-                onClick={() => setImage(null)}
-                className="mt-3 flex items-center gap-2 text-sm text-red-600 hover:text-red-700"
+              <div>
+                <label htmlFor="productLocation" className={labelClass}>
+                  Product Location *
+                </label>
+                <input
+                  id="productLocation"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="e.g. Addis Ababa"
+                  maxLength={100}
+                  required
+                  className={inputClass}
+                />
+              </div>
+            </section>
+
+            {/* Description */}
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Tag size={18} className="text-emerald-700" />
+                <h2 className="text-base font-semibold text-gray-900">
+                  Product Details
+                </h2>
+              </div>
+
+              <div>
+                <label htmlFor="productDescription" className={labelClass}>
+                  Description *
+                </label>
+                <textarea
+                  id="productDescription"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Describe the product quality, features, and other important details..."
+                  rows={4}
+                  maxLength={1500}
+                  required
+                  className={`${inputClass} resize-y`}
+                />
+                <p className="mt-1 text-right text-xs text-gray-400">
+                  {description.length}/1500 characters
+                </p>
+              </div>
+            </section>
+
+            {/* Image upload */}
+            <section>
+              <div className="mb-3">
+                <h2 className="text-base font-semibold text-gray-900">
+                  Product Image *
+                </h2>
+                <p className="mt-1 text-xs text-gray-500">
+                  Use a clear image of the product you're selling.
+                </p>
+              </div>
+
+              <label
+                htmlFor="productImage"
+                className="flex min-h-40 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-4 text-center transition hover:border-emerald-500 hover:bg-emerald-50/50"
               >
-                <X size={16} />
-                Remove image
-              </button>
+                {preview ? (
+                  <img
+                    src={preview}
+                    alt="Selected product preview"
+                    className="max-h-52 max-w-full rounded-lg object-contain"
+                  />
+                ) : (
+                  <>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                      <ImagePlus size={25} />
+                    </div>
+                    <p className="mt-3 text-sm font-semibold text-gray-700">
+                      Click to upload an image
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      PNG, JPG or WEBP · Maximum 5 MB
+                    </p>
+                  </>
+                )}
+              </label>
+
+              <input
+                id="productImage"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                required={!image}
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+
+                  if (!file) return;
+
+                  const allowedTypes = [
+                    "image/png",
+                    "image/jpeg",
+                    "image/webp",
+                  ];
+
+                  if (!allowedTypes.includes(file.type)) {
+                    setError("Choose a PNG, JPG, or WEBP image.");
+                    e.target.value = "";
+                    return;
+                  }
+
+                  if (file.size > MAX_IMAGE_SIZE) {
+                    setError("Image must be 5 MB or smaller.");
+                    e.target.value = "";
+                    return;
+                  }
+
+                  setError("");
+                  setImage(file);
+                }}
+              />
+
+              {image && (
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-gray-800">
+                      {image.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {(image.size / (1024 * 1024)).toFixed(2)} MB
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImage(null);
+                      setError("");
+                    }}
+                    aria-label="Remove selected image"
+                    className="shrink-0 rounded-lg p-2 text-gray-500 transition hover:bg-red-50 hover:text-red-600"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              )}
+            </section>
+
+            {/* Validation feedback */}
+            {error && (
+              <div
+                role="alert"
+                className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+              >
+                {error}
+              </div>
             )}
           </div>
 
-          {/* Feedback */}
-          {error && (
-            <p
-              role="alert"
-              className="rounded-lg bg-red-50 p-3 text-sm text-red-700"
-            >
-              {error}
-            </p>
-          )}
-
-          {success && (
-            <div
-              role="status"
-              className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800"
-            >
-              Form validated successfully. Backend saving is not
-              implemented yet.
-            </div>
-          )}
-
-          {/* Buttons */}
-          <div className="flex flex-col-reverse gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:justify-end">
+          {/* Form actions */}
+          <div className="flex flex-col-reverse gap-3 border-t border-gray-100 bg-gray-50/70 p-4 sm:flex-row sm:justify-end sm:px-6">
             <button
               type="button"
               onClick={() => navigate("/seller/products")}
-              className="rounded-lg border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              disabled={submitting}
+              className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>
 
             <button
               type="submit"
-              className="rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800"
+              disabled={submitting}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Add Product
+              {submitting ? (
+                <>
+                  <LoaderCircle size={17} className="animate-spin" />
+                  Adding Product...
+                </>
+              ) : (
+                <>
+                  <PackagePlus size={17} />
+                  Add Product
+                </>
+              )}
             </button>
           </div>
         </form>
+
+        <p className="mt-4 text-center text-xs text-gray-400">
+          Fields marked with * are required.
+        </p>
       </div>
     </div>
   );
