@@ -2,12 +2,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
-import eggTray from "../assets/02_egg_tray.jpg";
-import brownHen from "../assets/03_brown_hen.jpg";
-import whiteHens from "../assets/04_white_hens.jpg";
-import stackedEggTrays from "../assets/05_stacked_egg_trays.jpg";
-import eggBasket from "../assets/06_egg_basket.jpg";
-import  type {Product} from "../data/products";
 import {product as products}   from "../data/products";
 
 type TabName = "Description" | "Specifications" | "Seller Info";

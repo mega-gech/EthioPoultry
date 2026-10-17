@@ -161,3 +161,4 @@ export const product: Product[] = [
     images: [stackedEggTrays, eggTray, eggBasket, brownHen],
   },
 ];
+
