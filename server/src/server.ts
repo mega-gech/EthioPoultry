@@ -5,6 +5,10 @@ import dotenv from "dotenv"
 
 dotenv.config();
 const app = express();
+
+app.use(cors());
+app.use(express.json())
+
 const port = process.env.PORT
 
 app.get("/api/health",(req, res)=>{
@@ -15,11 +19,7 @@ app.get("/api/health",(req, res)=>{
     })
 })
 
-app.use(cors());
-app.use(express.json())
-
 connectDB()
-
 
 app.listen(port, ()=>{
     console.log(`server started;${port}`)
