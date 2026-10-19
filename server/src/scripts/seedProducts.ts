@@ -1,21 +1,25 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import Product from "../models/Product.js"
-import { error } from "node:console";
+import  bcrypt from "bcryptjs"
+
+import Product from "../models/Product.js";
+import User  from  "../models/User.js";
 
 dotenv.config()
-
+6
 const sampleProducts = [
      {
     name: "Fresh Eggs (30 pcs)",
     description: "Fresh farm-produced eggs, carefully collected and packed.",
     price: 240,
     quantity: "30 pcs",
-    category: "Eggs",
+    category: "Eggs" as const,
     image: "https://placehold.co/600x400?text=Fresh+Eggs",
     images: [],
     location: "Addis Ababa",
-    sellerId: "68f000000000000000000001",
+    rating: 4.8,
+    reviews: 24,
+    status: "Active" as const,
   },
   {
     name: "Brown Layer Chicken",
@@ -26,7 +30,9 @@ const sampleProducts = [
     image: "https://placehold.co/600x400?text=Brown+Chicken",
     images: [],
     location: "Addis Ababa",
-    sellerId: "68f000000000000000000001",
+    rating: 4.8,
+    reviews: 24,
+    status: "Active" as const,
   },
   {
     name: "Poultry Feed (25 kg)",
@@ -37,7 +43,9 @@ const sampleProducts = [
     image: "https://placehold.co/600x400?text=Poultry+Feed",
     images: [],
     location: "Bahir Dar",
-    sellerId: "68f000000000000000000001",
+    rating: 4.8,
+    reviews: 24,
+    status: "Active" as const,
   },
   {
     name: "Poultry Waterer",
@@ -48,27 +56,93 @@ const sampleProducts = [
     image: "https://placehold.co/600x400?text=Poultry+Waterer",
     images: [],
     location: "Addis Ababa",
-    sellerId: "68f000000000000000000001",
+    rating: 4.8,
+    reviews: 24,
+    status: "Active" as const,
   },
 ];
 
-async function seedProducts() {
+async function seedProducts(): Promise<void> {
     try {
         const mongoURI =  process.env.MONGO_URI;
+        const sellerEmail = process.env.SAMPLE_SELLER_EMAIL?.trim().toLowerCase();
+        const sellerPassword = process.env.SAMPLE_SELLER_PASSWORD;
+
         if(!mongoURI){
              throw new Error("MONGO_URI misssing from env");
+        }
+
+        if(!sellerEmail || !sellerPassword){
+            throw new Error(
+                 "Set SAMPLE_SELLER_EMAIL and SAMPLE_SELLER_PASSWORD in .env"
+                )
+        }
+
+        if (sellerPassword.length < 4) {
+            throw new Error(
+              "Use a sample seller password with at least 4 characters"
+            );
         }
 
         await mongoose.connect(mongoURI)
         console.log("mongo connected")
 
-        await Product.deleteMany({
-            name: {$in : sampleProducts.map((product)=>product.name) }
-        })
+        let seller = await User.findOne({email: sellerEmail});
 
-        await Product.insertMany(sampleProducts)
-        console.log("inserted seccessfully")
+        if (seller) {
+          if (seller.role !== "seller") {
+          throw new Error(
+          "That email already belongs to a non-seller account. " +
+          "Choose a different SAMPLE_SELLER_EMAIL."
+         );
+        }
+         console.log("Existing sample seller found; reusing the account.");
+    }else{
+        const hashedPassword = await bcrypt.hash(sellerPassword, 4);
 
+        seller = await User.create({
+        name: "Abebe Poultry Farm",
+        email: sellerEmail,
+        password: hashedPassword,
+        role: "seller",
+        location: "Addis Ababa",
+        phone: "0912345678",
+      });
+      console.log("Sample seller created successfully.");
+    }
+    
+    console.log("Seller MongoDB ID:", seller._id.toString());
+
+    for (const product of sampleProducts){
+        await Product.updateOne(
+            {name: product.name},
+            {
+                $set:{
+                    ...product,
+                    sellerId: seller._id,
+                },
+            },
+            {upsert: true}
+        );
+        console.log(`Product seeded: ${product.name}`);
+    }
+
+    const linkedProducts = await Product.find({
+        sellerId: seller._id,
+    }).select("name sellerId").lean()
+
+     console.log("\nSeller verification:");
+     console.log("Seller:", seller.name);
+     console.log("Seller ID:", seller._id.toString());
+     console.log("Linked products:", linkedProducts.length);
+
+     for (const product of linkedProducts){
+         console.log(
+        `- ${product.name} | sellerId: ${product.sellerId.toString()}`
+      );
+     }
+     console.log("\nDatabase seeding completed.");
+     
     } catch (error) {
         console.log("insertion error")
         process.exitCode=1
