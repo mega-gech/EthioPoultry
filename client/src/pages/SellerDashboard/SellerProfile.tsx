@@ -19,7 +19,7 @@ import {
   Store,
 } from "lucide-react";
 
-import { products } from "../data/products";
+import { products } from "../../data/products";
 
 type ProfileTab = "About" | "Products" | "Reviews";
 

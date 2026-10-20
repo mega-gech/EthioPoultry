@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from "./pages/Home";
 import Products from './pages/Products';
 import ProductDetails from './pages/ProductDetails';
-import SellerProfile from './pages/SellerProfile';
+import SellerProfile from './pages/SellerDashboard/SellerProfile';
 import Login from './pages/Login'
 import Register from './pages/Register'
 import BuyerProfile from "./pages/buyerProfile/BuyerProfile";
@@ -33,6 +33,7 @@ function App() {
         <Route  path="/seller/products"  element={<SellerProducts />} />
         <Route  path="/seller/products/add"  element={<AddProduct />} />
         <Route  path="/seller/products/edit/:id"  element={<EditProduct />}/>
+        <Route  path='/seller/profile' element={< SellerProfile/>} />
       </Routes>
   );
 }
