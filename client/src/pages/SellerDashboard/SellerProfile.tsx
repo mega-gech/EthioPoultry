@@ -1,5 +1,5 @@
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   MapPin,
@@ -19,55 +19,96 @@ import {
   Store,
 } from "lucide-react";
 
-import { products } from "../../data/products";
+import {
+  getSellerProfile,
+  type Seller,
+  type SellerProduct
+} from "../../services/sellerService"
+ 
+
 
 type ProfileTab = "About" | "Products" | "Reviews";
-
 const tabs: ProfileTab[] = ["About", "Products", "Reviews"];
-
 function formatPrice(price: number) {
   return `${price.toLocaleString("en-ET")} ETB`;
 }
 
 function getPhoneNumber(phone?: string) {
   if (!phone) return "";
-
   let number = phone.replace(/\D/g, "");
-
   if (number.startsWith("0")) {
     number = `251${number.slice(1)}`;
   } else if (number.startsWith("9") && number.length === 9) {
     number = `251${number}`;
   }
-
   return number.length >= 12 && number.length <= 15 ? number : "";
 }
 
 export default function SellerProfile() {
-  const params = useParams();
+  const params = useParams<{ id?: string; sellerId?: string }>();
 
-  // Supports either /sellerProfile/:id or /sellerProfile/:sellerId.
-  const rawId = params.sellerId ?? params.id;
-  const sellerId = Number(rawId);
+  // Use the seller ID from the URL when available.
+  // The fallback ID lets you test the page before dynamic routing is connected.
+  const sellerId =
+    params.sellerId ??
+    params.id ??
+    "6ad64a630ce00a62094a96d9";
+
+  const [seller, setSeller] = useState<Seller | null>(null);
+  const [sellerProducts, setSellerProducts] = useState<SellerProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>("About");
   const [productSearch, setProductSearch] = useState("");
   const [productCategory, setProductCategory] = useState("All");
 
-  // Find all products belonging to this seller.
-  const sellerProducts = useMemo(
-    () =>
-      products.filter(
-        (product) =>
-          Number(product.sellerId) === sellerId,
-      ),
-    [sellerId],
-  );
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSeller() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const data = await getSellerProfile(sellerId);
+
+        // Avoid updating state if the component unmounts during the request.
+        if (!cancelled) {
+          setSeller(data.seller);
+          setSellerProducts(data.products);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Something went wrong while loading the seller."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadSeller();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sellerId]);
 
   const firstProduct = sellerProducts[0];
-  const farmName = firstProduct?.seller;
+  const farmName = seller?.name ?? "Poultry Farm";
+  const farmLocation =
+    seller?.location || firstProduct?.location || "Location not provided";
+  const coverImage =
+    firstProduct?.image ||
+    "https://placehold.co/1200x400?text=EthioPoultry+Farm";
 
-  // Calculate profile statistics from the shared product data.
+  // Calculate profile statistics from the products returned by the API.
   const averageRating = sellerProducts.length
     ? (
         sellerProducts.reduce(
@@ -103,28 +144,49 @@ export default function SellerProfile() {
     return matchesSearch && matchesCategory;
   });
 
-  if (
-    !rawId ||
-    !Number.isInteger(sellerId) ||
-    sellerId <= 0 ||
-    !farmName
-  ) {
+  if (loading) {
+    return (
+      <main className="flex min-h-[80vh] items-center justify-center bg-[#f6f8f5] px-4 py-16">
+        <p className="text-sm font-medium text-gray-600">
+          Loading seller profile...
+        </p>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="flex min-h-[80vh] items-center justify-center bg-[#f6f8f5] px-4 py-16">
+        <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <h1 className="text-xl font-bold text-gray-900">
+            Could not load seller profile
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-red-600">{error}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-6 rounded-xl bg-green-700 px-5 py-3 text-sm font-semibold text-white hover:bg-green-800"
+          >
+            Try again
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  if (!seller) {
     return (
       <main className="flex min-h-[80vh] items-center justify-center bg-[#f6f8f5] px-4 py-16">
         <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-green-50 text-green-700">
             <Store size={30} />
           </div>
-
           <h1 className="mt-5 text-2xl font-bold tracking-tight text-gray-900">
             Seller not found
           </h1>
-
           <p className="mt-2 text-sm leading-6 text-gray-500">
-            We couldn't find this farm. It may not have any listed
-            products yet, or the profile link may be incorrect.
+            We couldn't find this farm. The profile link may be incorrect.
           </p>
-
           <Link
             to="/products"
             className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-green-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-800"
@@ -137,13 +199,11 @@ export default function SellerProfile() {
     );
   }
 
-  const phoneNumber = getPhoneNumber(firstProduct.sellerPhone);
+  const phoneNumber = getPhoneNumber(seller.phone);
 
   const handleCall = () => {
     if (!phoneNumber) {
-      window.alert(
-        "The seller's phone number is not available. Please update sellerPhone in your product data.",
-      );
+      window.alert("The seller's phone number is not available.");
       return;
     }
 
@@ -152,9 +212,7 @@ export default function SellerProfile() {
 
   const handleWhatsApp = () => {
     if (!phoneNumber) {
-      window.alert(
-        "The seller's WhatsApp number is not available. Please update sellerPhone in your product data.",
-      );
+      window.alert("The seller's WhatsApp number is not available.");
       return;
     }
 
@@ -203,7 +261,7 @@ export default function SellerProfile() {
         {/* Farm cover */}
         <section className="relative isolate h-56 overflow-hidden rounded-2xl bg-green-950 shadow-sm sm:h-72 lg:h-[330px]">
           <img
-            src={firstProduct.image}
+            src={coverImage}
             alt={`${farmName} poultry farm`}
             className="absolute inset-0 -z-20 h-full w-full object-cover"
           />
@@ -231,7 +289,7 @@ export default function SellerProfile() {
 
             <p className="mt-3 flex items-center gap-2 text-xs text-white/85 sm:text-sm">
               <MapPin size={16} className="shrink-0" />
-              {firstProduct.location}, Ethiopia
+              {farmLocation}, Ethiopia
             </p>
           </div>
         </section>
@@ -264,7 +322,7 @@ export default function SellerProfile() {
                 <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500 sm:text-sm">
                   <span className="inline-flex items-center gap-1.5">
                     <MapPin size={15} className="text-green-700" />
-                    {firstProduct.location}
+                    {farmLocation}
                   </span>
 
                   <span className="inline-flex items-center gap-1.5">
@@ -491,7 +549,7 @@ export default function SellerProfile() {
                           Location
                         </p>
                         <p className="mt-1 text-sm font-semibold text-gray-800">
-                          {firstProduct.location}, Ethiopia
+                          {farmLocation}, Ethiopia
                         </p>
                       </div>
                     </div>
@@ -607,8 +665,8 @@ export default function SellerProfile() {
 
                       return (
                         <Link
-                          key={product.id}
-                          to={`/product/${product.id}`}
+                          key={product._id}
+                          to={`/product/${product._id}`}
                           className="group overflow-hidden rounded-2xl border border-gray-100 bg-white transition duration-200 hover:-translate-y-1 hover:border-green-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-green-600"
                         >
                           <div className="relative h-44 overflow-hidden bg-gray-100 sm:h-48">
@@ -786,7 +844,7 @@ export default function SellerProfile() {
 
                   {sellerProducts.map((product) => (
                     <div
-                      key={product.id}
+                      key={product._id}
                       className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-gray-100 px-4 py-4 sm:px-5"
                     >
                       <div className="flex min-w-0 items-center gap-3">
