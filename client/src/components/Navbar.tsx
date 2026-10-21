@@ -102,7 +102,7 @@ function Navbar() {
   // Temporary destination until the create-listing route is ready.
   const handlePostAd = () => {
     setIsMenuOpen(false);
-    navigate("/seller/products/add");
+    navigate("/seller/dashboard");
   };
 
   return (
