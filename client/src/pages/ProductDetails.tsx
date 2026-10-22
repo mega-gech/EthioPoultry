@@ -237,7 +237,7 @@ export default function ProductDetails() {
                     onClick={handleSellerProfile}
                     className="font-semibold text-gray-800 hover:text-green-700 hover:underline"
                   >
-                    {product.sellerId}
+                   {}
                   </button>
                 </p>
 

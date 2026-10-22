@@ -11,6 +11,12 @@ export interface Seller {
   createdAt: string;
 }
 
+export interface ProductSeller {
+  _id: string;
+  name: string;
+  phone?: string;
+}
+
 export interface SellerProduct {
   _id: string;
   name: string;
@@ -21,7 +27,7 @@ export interface SellerProduct {
   image: string;
   images: string[];
   location: string;
-  sellerId: string;
+  sellerId: string | ProductSeller;
   rating: number;
   reviews: number;
   status: "Active" | "Out of Stock";
@@ -56,22 +62,22 @@ export async function getProductById(id: string):Promise<SellerProduct> {
         message?: string
     } = await response.json()
     if(!response.ok || !result.success){
-            throw new Error("failed to fatch seller profile");
+            throw new Error("failed to fatch a product");
         };
         return result.data;
 }
 
 export async function getProducts():Promise<SellerProduct[]> {
-    const response = await fetch(`API_URL}/products`);
+    const response = await fetch(`${API_URL}/products`);
     const result:{
         success: boolean,
-         count?: Number,
+         count?: number,
         data: SellerProduct[],
         message?: string
     } = await response.json()
 
     if(!response.ok || !result.success){
-            throw new Error(result.message || "failed to fatch seller profile");
+            throw new Error(result.message || "Failed to fetch products");
         };
         return result.data;
 }

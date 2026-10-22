@@ -7,7 +7,7 @@ export const getProducts = async (
     res: Response
 ):Promise<void>=>{
     try {
-        const products = await Product.find().sort({
+        const products = await Product.find().populate("sellerId", "name phone").sort({
             createdAt: -1,
         });
 
@@ -41,7 +41,7 @@ export const getProductById = async(
             return;
         }
 
-        const product = Product.findById(id);
+        const product = Product.findById(id).populate("sellerId", "name phone");
 
         if(!product){
             res.status(404).json({
