@@ -60,3 +60,18 @@ export async function getProductById(id: string):Promise<SellerProduct> {
         };
         return result.data;
 }
+
+export async function getProducts():Promise<SellerProduct[]> {
+    const response = await fetch(`API_URL}/products`);
+    const result:{
+        success: boolean,
+         count?: Number,
+        data: SellerProduct[],
+        message?: string
+    } = await response.json()
+
+    if(!response.ok || !result.success){
+            throw new Error(result.message || "failed to fatch seller profile");
+        };
+        return result.data;
+}

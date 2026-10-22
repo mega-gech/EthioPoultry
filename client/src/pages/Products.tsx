@@ -1,11 +1,11 @@
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import Topbar from "../components/Topbar";
 import Navbar from "../components/Navbar";
-import { products } from "../data/products";
-
+import {
+  getProducts,
+  type SellerProduct } from "../services/sellerService"
 const categories = [
   "Eggs",
   "Chickens",
@@ -50,6 +50,28 @@ function formatPrice(price: number) {
 
 function Products() {
   const navigate = useNavigate();
+  const [products, setProducts] = useState<SellerProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(()=>{
+    async function loadProducts() {
+      try {
+        setLoading(true)
+        setError("")
+        const data = await getProducts();
+        setProducts(data)
+      } catch (error) {
+        setError(
+          error instanceof Error? error.message : "unavle to load products"
+        ) 
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProducts()
+  }, [])
 
   // Search and filter states
   const [search, setSearch] = useState("");
@@ -61,9 +83,9 @@ function Products() {
   const [sortBy, setSortBy] = useState("newest");
 
   // Favorite product IDs
-  const [favorites, setFavorites] = useState<number[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
-  const toggleFavorite = (id: number) => {
+  const toggleFavorite = (id: string) => {
     setFavorites((current) =>
       current.includes(id)
         ? current.filter((item) => item !== id)
@@ -81,7 +103,7 @@ function Products() {
         product.name.toLowerCase().includes(normalizedSearch) ||
         product.category.toLowerCase().includes(normalizedSearch) ||
         product.location.toLowerCase().includes(normalizedSearch) ||
-        product.seller.toLowerCase().includes(normalizedSearch) ||
+        product.name.toLowerCase().includes(normalizedSearch) ||
         product.description.toLowerCase().includes(normalizedSearch);
 
       const matchesSidebarCategory =
@@ -183,7 +205,7 @@ function Products() {
     );
   };
 
-  const openProduct = (id: number) => {
+  const openProduct = (id: string) => {
     navigate(`/products/${id}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -192,6 +214,8 @@ function Products() {
     <>
       <Topbar />
       <Navbar />
+
+      
 
       <main className="min-h-screen bg-[#f3fbfa]">
         <div className="mx-auto max-w-[1280px] px-4 py-5 sm:px-6 lg:px-8">
@@ -457,23 +481,23 @@ function Products() {
               {/* Product cards */}
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredProducts.map((product) => {
-                  const isFavorite = favorites.includes(product.id);
+                  const isFavorite = favorites.includes(product._id);
                   const isAvailable = product.status !== "Out of Stock";
 
                   return (
                     <article
-                      key={product.id}
+                      key={product._id}
                       role="link"
                       tabIndex={0}
                       aria-label={`View ${product.name} details`}
-                      onClick={() => openProduct(product.id)}
+                      onClick={() => openProduct(product._id)}
                       onKeyDown={(event) => {
                         if (
                           event.key === "Enter" ||
                           event.key === " "
                         ) {
                           event.preventDefault();
-                          openProduct(product.id);
+                          openProduct(product._id);
                         }
                       }}
                       className="group min-w-0 cursor-pointer overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-green-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -503,7 +527,7 @@ function Products() {
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
-                            toggleFavorite(product.id);
+                            toggleFavorite(product._id);
                           }}
                           aria-label={
                             isFavorite
@@ -589,7 +613,7 @@ function Products() {
                         <p className="mt-2 truncate text-[10px] text-gray-500">
                           Seller:{" "}
                           <span className="font-medium text-gray-700">
-                            {product.seller}
+                            {product.sellerId}
                           </span>
                         </p>
 
@@ -599,7 +623,7 @@ function Products() {
                             type="button"
                             disabled={!isAvailable}
                             onClick={(event) =>
-                              callSeller(event, product.sellerPhone)
+                              callSeller(event, product.name)
                             }
                             className="flex h-8 min-w-0 items-center justify-center gap-1 rounded-md bg-green-600 px-1 text-[9px] font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300 sm:text-[10px]"
                           >
@@ -619,7 +643,7 @@ function Products() {
                             onClick={(event) =>
                               contactWhatsApp(
                                 event,
-                                product.sellerPhone,
+                                product.name,
                                 product.name,
                               )
                             }
