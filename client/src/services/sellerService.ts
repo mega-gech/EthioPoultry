@@ -48,3 +48,15 @@ export async function getSellerProfile(
         return result.data;
 }
 
+export async function getProductById(id: string):Promise<SellerProduct> {
+    const response = await fetch(`${API_URL}/products/${id}`);
+    const result:{
+        success: boolean,
+        data: SellerProduct,
+        message?: string
+    } = await response.json()
+    if(!response.ok || !result.success){
+            throw new Error("failed to fatch seller profile");
+        };
+        return result.data;
+}

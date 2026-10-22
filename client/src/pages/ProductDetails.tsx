@@ -1,17 +1,45 @@
 
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-
-import {product as products}   from "../data/products";
-
 type TabName = "Description" | "Specifications" | "Seller Info";
+import {
+  getProductById,
+  type SellerProduct
+} from "../services/sellerService"
 
 
 export default function ProductDetails() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const [product, setProduct] = useState<SellerProduct | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const product = products.find((item) => item.id === Number(id));
+  useEffect(()=>{
+    if(!id){
+      setError("product id missing")
+      setLoading(false);
+      return
+    }
+
+     const productId: string = id;
+
+    async function loadProduct() {
+      try {
+        setLoading(true);
+        setError("");
+        const data = await getProductById(productId)
+        setProduct(data)
+      } catch (error) {
+        setError(
+          error instanceof Error ? error.message : "unable to load product"
+        )
+      } finally{
+        setLoading(false)
+      }
+    }
+    loadProduct()
+  }, [id])
 
   const [activeImage, setActiveImage] = useState(0);
   const [activeTab, setActiveTab] = useState<TabName>("Description");
@@ -45,12 +73,42 @@ export default function ProductDetails() {
     );
   }
 
+  if (loading) {
+    return (
+      <main className="flex min-h-[80vh] items-center justify-center bg-[#f6f8f5] px-4 py-16">
+        <p className="text-sm font-medium text-gray-600">
+          Loading seller profile...
+        </p>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="flex min-h-[80vh] items-center justify-center bg-[#f6f8f5] px-4 py-16">
+        <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <h1 className="text-xl font-bold text-gray-900">
+            Could not load seller profile
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-red-600">{error}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-6 rounded-xl bg-green-700 px-5 py-3 text-sm font-semibold text-white hover:bg-green-800"
+          >
+            Try again
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   const handleCallSeller = () => {
-    window.location.href = `tel:${product.sellerPhone}`;
+    window.location.href = `tel:${product._id}`;
   };
 
   const handleWhatsApp = () => {
-    const phone = product.sellerPhone.replace(/\D/g, "");
+    const phone = product.category.replace(/\D/g, "");
 
     const message = `Hello, I am interested in ${product.name}, listed for ${product.price} ETB on EthioPoultry. Is it available?`;
 
@@ -105,7 +163,7 @@ export default function ProductDetails() {
             <div className="mt-3 grid grid-cols-4 gap-3">
               {product.images.map((image, index) => (
                 <button
-                  key={`${product.id}-${index}`}
+                  key={`${product._id}-${index}`}
                   type="button"
                   onClick={() => setActiveImage(index)}
                   aria-label={`View product image ${index + 1}`}
@@ -168,7 +226,7 @@ export default function ProductDetails() {
             {/* SELLER SUMMARY */}
             <div className="mt-5 flex items-center gap-3 border-t border-gray-200 pt-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-green-100 text-lg font-bold text-green-800">
-                {product.seller.charAt(0)}
+                {product.name.charAt(0)}
               </div>
 
               <div className="min-w-0 flex-1">
@@ -179,12 +237,12 @@ export default function ProductDetails() {
                     onClick={handleSellerProfile}
                     className="font-semibold text-gray-800 hover:text-green-700 hover:underline"
                   >
-                    {product.seller}
+                    {product.sellerId}
                   </button>
                 </p>
 
                 <p className="mt-1 text-xs text-gray-500">
-                  ★ {product.rating} · {product.sellerProducts} products
+                  ★ {product.rating} · {product.rating} products
                 </p>
               </div>
 
@@ -314,7 +372,7 @@ export default function ProductDetails() {
             {activeTab === "Seller Info" && (
               <div>
                 <h3 className="text-base font-semibold text-gray-800">
-                  {product.seller}
+                  {product.reviews}
                 </h3>
 
                 <p className="mt-2">
@@ -323,7 +381,7 @@ export default function ProductDetails() {
 
                 <p>Seller rating: {product.rating} / 5</p>
 
-                <p>Listed products: {product.sellerProducts}</p>
+                <p>Listed products: {product.quantity}</p>
 
                 <div className="mt-4 flex flex-wrap gap-3">
                   <button
