@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { useProducts } from "../../context/ProductContext";
+import {createProduct} from "../../services/sellerService"
 import type { Product } from "../../data/products";
 
 type ProductCategory = "Eggs" | "Chickens" | "Equipment" | "Feed";
@@ -118,33 +119,24 @@ export default function AddProduct() {
 
       const imageUrl = await fileToDataUrl(image);
 
-      const newProduct: Product = {
-        id: Date.now(),
-        sellerId: 1234,
-        name: name.trim(),
-        sellerPhone:"wdmkfwe",
-        image: imageUrl,
-        location: location.trim(),
-        price: numericPrice,
-        quantity: `${numericQuantity} ${unit}`,
-        category,
-        description: description.trim(),
-        seller: "Abebe Poultry Farm",
-        rating: "0",
-        reviews: 0,
-        sellerProducts: 0,
-        images: [imageUrl],
-        status: "Active",
-      };
-
-      await addProduct(newProduct);
+      await createProduct({
+      name: name.trim(),
+     description: description.trim(),
+     price: numericPrice,
+     quantity: `${numericQuantity} ${unit}`,
+     category,
+     image: imageUrl,
+    images: [imageUrl],
+    location: location.trim(),
+  });
 
       navigate("/seller/products", {
         state: { message: "Product added successfully!" },
       });
-    } catch {
+    } catch(err) {
       setError(
-        "Could not add the product. Please try again."
+        err instanceof Error? err.message
+        :"Could not add the product. Please try again."
       );
     } finally {
       setSubmitting(false);

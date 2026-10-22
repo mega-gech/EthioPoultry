@@ -144,7 +144,7 @@ async function seedProducts(): Promise<void> {
      console.log("\nDatabase seeding completed.");
      
     } catch (error) {
-        console.log("insertion error")
+        console.log("insertion error", error)
         process.exitCode=1
     } finally{
         mongoose.disconnect()

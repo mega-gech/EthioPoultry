@@ -1,6 +1,7 @@
 
 
-const API_URL = "http://localhost:5000/api";
+export const API_URL = "http://localhost:5000/api";
+const DEV_SELLER_ID = "6ad64a630ce00a62094a96d9";
 
 export interface Seller {
   _id: string;
@@ -9,6 +10,17 @@ export interface Seller {
   location?: string;
   phone?: string;
   createdAt: string;
+}
+
+export interface CreateProductData {
+  name: string;
+  description: string;
+  price: number;
+  quantity: string;
+  category: "Eggs" | "Chickens" | "Equipment" | "Feed";
+  image: string;
+  images: string[];
+  location: string;
 }
 
 export interface ProductSeller {
@@ -80,4 +92,24 @@ export async function getProducts():Promise<SellerProduct[]> {
             throw new Error(result.message || "Failed to fetch products");
         };
         return result.data;
+}
+
+export async function createProduct(productData:CreateProductData) {
+    const response = await fetch(`${API_URL}/products`, {
+        method: "POST",
+        headers:{
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            ...productData,
+            sellerId: DEV_SELLER_ID,
+        })
+    });
+
+    const result = await response.json();
+
+    if(!response.ok){
+        throw new Error(result.message || "Failed to create product");
+    }
+    return result
 }
