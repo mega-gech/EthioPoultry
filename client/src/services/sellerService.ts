@@ -27,7 +27,7 @@ export interface SellerProduct {
   image: string;
   images: string[];
   location: string;
-  sellerId: string | ProductSeller;
+  sellerId: string | ProductSeller | null;
   rating: number;
   reviews: number;
   status: "Active" | "Out of Stock";

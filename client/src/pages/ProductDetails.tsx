@@ -77,7 +77,7 @@ export default function ProductDetails() {
     return (
       <main className="flex min-h-[80vh] items-center justify-center bg-[#f6f8f5] px-4 py-16">
         <p className="text-sm font-medium text-gray-600">
-          Loading seller profile...
+          Loading product details...
         </p>
       </main>
     );
@@ -88,7 +88,7 @@ export default function ProductDetails() {
       <main className="flex min-h-[80vh] items-center justify-center bg-[#f6f8f5] px-4 py-16">
         <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
           <h1 className="text-xl font-bold text-gray-900">
-            Could not load seller profile
+            Could not load product
           </h1>
           <p className="mt-3 text-sm leading-6 text-red-600">{error}</p>
           <button

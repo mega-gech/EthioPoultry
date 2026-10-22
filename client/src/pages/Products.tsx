@@ -48,6 +48,22 @@ function formatPrice(price: number) {
   return `${price.toLocaleString("en-ET")} ETB`;
 }
 
+function getSeller(product: SellerProduct) {
+  const seller = product.sellerId;
+
+  if (!seller || typeof seller === "string") {
+    return {
+      name: "Unknown seller",
+      phone: undefined,
+    };
+  }
+
+  return {
+    name: seller.name || "Unknown seller",
+    phone: seller.phone,
+  };
+}
+
 function Products() {
   const navigate = useNavigate();
   const [products, setProducts] = useState<SellerProduct[]>([]);
@@ -95,16 +111,17 @@ function Products() {
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
+    
     const normalizedSearch = search.trim().toLowerCase();
 
     const result = products.filter((product) => {
       const matchesSearch =
-        !normalizedSearch ||
-        product.name.toLowerCase().includes(normalizedSearch) ||
-        product.category.toLowerCase().includes(normalizedSearch) ||
-        product.location.toLowerCase().includes(normalizedSearch) ||
-        product.name.toLowerCase().includes(normalizedSearch) ||
-        product.description.toLowerCase().includes(normalizedSearch);
+     !normalizedSearch ||
+     product.name.toLowerCase().includes(normalizedSearch) ||
+     product.category.toLowerCase().includes(normalizedSearch) ||
+      product.location.toLowerCase().includes(normalizedSearch) ||
+     (product.description ?? "").toLowerCase().includes(normalizedSearch) ||
+     getSeller(product).name.toLowerCase().includes(normalizedSearch);
 
       const matchesSidebarCategory =
         !sidebarCategory || product.category === sidebarCategory;
@@ -210,22 +227,24 @@ function Products() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-      if (loading) {
-         return (
+  return (
+    <>
+      <Topbar />
+      <Navbar />
+
+      <main className="min-h-screen bg-[#f3fbfa]">
+
+         {loading ?  (
       <main className="flex min-h-[80vh] items-center justify-center bg-[#f6f8f5] px-4 py-16">
         <p className="text-sm font-medium text-gray-600">
-          Loading seller profile...
+          Loading products...
         </p>
       </main>
-    );
-  }
-
-  if (error) {
-    return (
+    ) : error? (
       <main className="flex min-h-[80vh] items-center justify-center bg-[#f6f8f5] px-4 py-16">
         <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
           <h1 className="text-xl font-bold text-gray-900">
-            Could not load seller profile
+            Could not load products
           </h1>
           <p className="mt-3 text-sm leading-6 text-red-600">{error}</p>
           <button
@@ -237,15 +256,8 @@ function Products() {
           </button>
         </div>
       </main>
-    );
-    }
+    ): (
 
-  return (
-    <>
-      <Topbar />
-      <Navbar />
-
-      <main className="min-h-screen bg-[#f3fbfa]">
         <div className="mx-auto max-w-[1280px] px-4 py-5 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-[225px_minmax(0,1fr)]">
             {/* FILTER SIDEBAR */}
@@ -509,6 +521,7 @@ function Products() {
               {/* Product cards */}
               <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredProducts.map((product) => {
+                  const seller = getSeller(product);
                   const isFavorite = favorites.includes(product._id);
                   const isAvailable = product.status !== "Out of Stock";
 
@@ -641,9 +654,7 @@ function Products() {
                         <p className="mt-2 truncate text-[10px] text-gray-500">
                           Seller:{" "}
                           <span className="font-medium text-gray-700">
-                             {typeof product.sellerId === "string" 
-                             ? "Unknown Seller" 
-                             : product.sellerId.name}
+                             {seller.name}
                           </span>
                         </p>
 
@@ -653,9 +664,7 @@ function Products() {
                             type="button"
                             disabled={!isAvailable}
                             onClick={(event) =>
-                              callSeller(event,  typeof product.sellerId === "string"
-                              ? undefined
-                              : product.sellerId.phone)
+                              callSeller(event, seller.phone)
                             }
                             className="flex h-8 min-w-0 items-center justify-center gap-1 rounded-md bg-green-600 px-1 text-[9px] font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300 sm:text-[10px]"
                           >
@@ -674,11 +683,7 @@ function Products() {
                             disabled={!isAvailable}
                             onClick={(event) =>
                               contactWhatsApp(
-                                event,
-                                typeof product.sellerId === "string"
-                               ? undefined
-                               : product.sellerId.phone,
-                                product.name
+                                event, seller.phone, seller.name
                               )
                             }
                             className="flex h-8 min-w-0 items-center justify-center gap-1 rounded-md border border-green-500 bg-white px-1 text-[9px] font-semibold text-green-700 transition hover:bg-green-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 sm:text-[10px]"
@@ -737,7 +742,7 @@ function Products() {
               )}
             </section>
           </div>
-        </div>
+        </div>)}
       </main>
     </>
   );

@@ -20,15 +20,15 @@ export const getProducts = async (
         console.log("get products error", error);
 
         res.status(500).json({
-            success: true,
+            success: false,
             message: "product retrive failed"
         })  
     }
 };
 
 export const getProductById = async(
-    res:Response,
-    req:Request
+    req:Request,
+    res:Response
 ):Promise<void>=>{
     try {
         const {id} = req.params;
@@ -41,7 +41,7 @@ export const getProductById = async(
             return;
         }
 
-        const product = Product.findById(id).populate("sellerId", "name phone");
+        const product = await Product.findById(id).populate("sellerId", "name phone");
 
         if(!product){
             res.status(404).json({
@@ -65,8 +65,8 @@ export const getProductById = async(
 };
 
 export const createProduct = async(
-    res:Response,
     req:Request,
+    res:Response
 ):Promise<void>=>{
     try {
          const {
@@ -151,8 +151,8 @@ export const createProduct = async(
 }
 
 export const updateProduct = async(
-    res:Response,
-    req: Request
+    req:Request,
+    res:Response
 ):Promise<void>=>{
     try {
         const {id} = req.params;
@@ -197,8 +197,8 @@ export const updateProduct = async(
 }
 
 export const deleteProduct = async(
-    res:Response,
-    req:Request
+    req:Request,
+    res:Response
 ):Promise<void>=>{
     try {
         const {id} = req.params;
