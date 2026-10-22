@@ -50,6 +50,37 @@ export default function ProductDetails() {
     setActiveTab("Description");
   }, [id]);
 
+  if (loading) {
+    return (
+      <main className="flex min-h-[80vh] items-center justify-center bg-[#f6f8f5] px-4 py-16">
+        <p className="text-sm font-medium text-gray-600">
+          Loading product details...
+        </p>
+      </main>
+    );
+  }
+
+   if (error) {
+    return (
+      <main className="flex min-h-[80vh] items-center justify-center bg-[#f6f8f5] px-4 py-16">
+        <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <h1 className="text-xl font-bold text-gray-900">
+            Could not load product
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-red-600">{error}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-6 rounded-xl bg-green-700 px-5 py-3 text-sm font-semibold text-white hover:bg-green-800"
+          >
+            Try again
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+
   if (!product) {
     return (
       <main className="min-h-screen bg-white px-4 py-16">
@@ -73,35 +104,12 @@ export default function ProductDetails() {
     );
   }
 
-  if (loading) {
-    return (
-      <main className="flex min-h-[80vh] items-center justify-center bg-[#f6f8f5] px-4 py-16">
-        <p className="text-sm font-medium text-gray-600">
-          Loading product details...
-        </p>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main className="flex min-h-[80vh] items-center justify-center bg-[#f6f8f5] px-4 py-16">
-        <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-          <h1 className="text-xl font-bold text-gray-900">
-            Could not load product
-          </h1>
-          <p className="mt-3 text-sm leading-6 text-red-600">{error}</p>
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="mt-6 rounded-xl bg-green-700 px-5 py-3 text-sm font-semibold text-white hover:bg-green-800"
-          >
-            Try again
-          </button>
-        </div>
-      </main>
-    );
-  }
+  const images =
+  product.images?.length
+    ? product.images
+    : product.image
+      ? [product.image]
+      : [];
 
   const handleCallSeller = () => {
     window.location.href = `tel:${product._id}`;
@@ -118,8 +126,15 @@ export default function ProductDetails() {
   };
 
   const handleSellerProfile = () => {
-    navigate(`/sellerProfile/${product.sellerId}`);
-  };
+    const seller = product.sellerId;
+
+    if (!seller || typeof seller === "string") {
+    window.alert("Seller profile is unavailable.");
+     return;
+    }
+
+    navigate(`/sellerProfile/${seller._id}`);
+   };
 
   return (
     <main className="min-h-screen bg-white">
@@ -153,7 +168,7 @@ export default function ProductDetails() {
           <div className="min-w-0">
             <div className="flex h-[280px] items-center justify-center overflow-hidden rounded-lg bg-gray-50 sm:h-[380px] lg:h-[410px]">
               <img
-                src={product.images[activeImage] ?? product.image}
+                src={images[activeImage] ?? product.image}
                 alt={product.name}
                 className="h-full w-full object-contain"
               />
@@ -161,7 +176,7 @@ export default function ProductDetails() {
 
             {/* THUMBNAILS */}
             <div className="mt-3 grid grid-cols-4 gap-3">
-              {product.images.map((image, index) => (
+              {images.map((image, index)  => (
                 <button
                   key={`${product._id}-${index}`}
                   type="button"
@@ -237,12 +252,16 @@ export default function ProductDetails() {
                     onClick={handleSellerProfile}
                     className="font-semibold text-gray-800 hover:text-green-700 hover:underline"
                   >
-                   {}
+                   {typeof product.sellerId === "string"
+                    ? "Unknown seller"
+                    : product.sellerId?.name ?? "Unknown seller"}
                   </button>
                 </p>
 
                 <p className="mt-1 text-xs text-gray-500">
-                  ★ {product.rating} · {product.rating} products
+                  {Number(product.rating) > 0
+                 ? "★".repeat(Math.min(5, Math.max(0, Math.round(Number(product.rating)))))
+                 : "No rating yet"} products
                 </p>
               </div>
 
@@ -348,7 +367,11 @@ export default function ProductDetails() {
                 <div className="flex justify-between gap-4 border-b border-gray-100 pb-2">
                   <span>Quantity</span>
                   <span className="text-right font-medium text-gray-800">
-                    {product.quantity}
+                    <h3>
+                    {typeof product.sellerId === "string"
+                    ? "Unknown seller"
+                    : product.sellerId?.name ?? "Unknown seller"}
+                   </h3>
                   </span>
                 </div>
 
@@ -372,7 +395,11 @@ export default function ProductDetails() {
             {activeTab === "Seller Info" && (
               <div>
                 <h3 className="text-base font-semibold text-gray-800">
-                  {product.reviews}
+                  {<h3>
+                   {typeof product.sellerId === "string"
+                  ? "Unknown seller"
+                  : product.sellerId?.name ?? "Unknown seller"}
+                  </h3>}
                 </h3>
 
                 <p className="mt-2">
