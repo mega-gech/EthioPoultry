@@ -1,66 +1,93 @@
 
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ImagePlus } from "lucide-react";
-import { useProducts } from "../../context/ProductContext";
 import {
   getProductById,
   updateProductById,
   type SellerProduct
 } from "../../services/sellerService";
 
-import type { Product } from "../../data/products";
-
 export default function EditProduct() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { products, updateProduct } = useProducts();
-  const product = products.find((item) => item.id === Number(id));
-  const [name, setName] = useState(product?.name ?? "");
-  const [price, setPrice] = useState(
-    product ? String(product.price) : ""
-  );
-  const [quantity, setQuantity] = useState(
-    product?.quantity ?? ""
-  );
-  const [category, setCategory] = useState(
-    product?.category ?? ""
-  );
-  const [description, setDescription] = useState(
-    product?.description ?? ""
-  );
-  const [location, setLocation] = useState(
-    product?.location ?? ""
-  );
-  const [status, setStatus] = useState<Product["status"]>(
-    product?.status ?? "Active"
-  );
+  const [product, setProduct] = useState<SellerProduct | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [category, setCategory] = useState<
+   SellerProduct["category"] | "">("");
+  const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
+  const [status, setStatus] = useState<SellerProduct["status"]>("Active");
   const [image, setImage] = useState<File | null>(null);
   const [error, setError] = useState("");
 
-  if (!product) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="mx-auto max-w-xl rounded-xl border bg-white p-8 text-center">
-          <h1 className="text-xl font-bold text-gray-900">
-            Product not found
-          </h1>
+  useEffect(() => {
+  async function loadProduct() {
+    if (!id) {
+      setError("Product ID is missing.");
+      setLoading(false);
+      return;
+    }
 
-          <p className="mt-2 text-sm text-gray-500">
-            The product may have been removed or the ID is incorrect.
-          </p>
+    try {
+      setError("");
 
-          <button
-            type="button"
-            onClick={() => navigate("/seller/products")}
-            className="mt-5 rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800"
-          >
-            Back to My Products
-          </button>
-        </div>
-      </div>
-    );
+      const data = await getProductById(id);
+
+      setProduct(data);
+      setName(data.name);
+      setPrice(String(data.price));
+      setQuantity(data.quantity);
+      setCategory(data.category);
+      setDescription(data.description);
+      setLocation(data.location);
+      setStatus(data.status);
+    } catch (error) {
+      console.error("Failed to load product:", error);
+      setError("Could not load this product. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
+
+  loadProduct();
+  }, [id]);
+
+  if (loading) {
+  return (
+    <div className="p-10 text-center text-gray-600">
+      Loading product details...
+    </div>
+  );
+}
+
+if (!product) {
+  return (
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="mx-auto max-w-xl rounded-xl border bg-white p-8 text-center">
+        <h1 className="text-xl font-bold text-gray-900">
+          Product not found
+        </h1>
+
+        <p className="mt-2 text-sm text-gray-500">
+          {error || "The product may have been removed or the ID is incorrect."}
+        </p>
+
+        <button
+          type="button"
+          onClick={() => navigate("/seller/products")}
+          className="mt-5 rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800"
+        >
+          Back to My Products
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
  function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -79,41 +106,57 @@ export default function EditProduct() {
   });
 }
 
-  
  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
   e.preventDefault();
 
-  if (!product) return;
+  if (!product || !id) return;
 
-  if (!name.trim() || !price || !quantity || !category || !location.trim()) {
-    alert("Please complete all required fields.");
+  if (
+    !name.trim() ||
+    !price ||
+    Number(price) <= 0 ||
+    !quantity.trim() ||
+    !category ||
+    !location.trim() ||
+    !description.trim()
+  ) {
+    setError("Please complete all required fields correctly.");
     return;
   }
 
   try {
+    setError("");
+
     const imageUrl = image
       ? await fileToDataUrl(image)
       : product.image;
 
-    const updatedProduct: Product = {
-      ...product,
+    await updateProductById(id, {
       name: name.trim(),
-      price: Number(price),
-      quantity: `${quantity} pcs`,
-      category,
       description: description.trim(),
-      location: location.trim(),
+      price: Number(price),
+      quantity: quantity.trim(),
+      category: category as SellerProduct["category"],
       image: imageUrl,
       images: imageUrl
-        ? [imageUrl, ...product.images.filter((url) => url !== product.image)]
+        ? [
+            imageUrl,
+            ...product.images.filter((url) => url !== product.image),
+          ]
         : product.images,
-    };
+      location: location.trim(),
+      status,
+    });
 
-    updateProduct(updatedProduct);
     alert("Product updated successfully!");
     navigate("/seller/products");
-  } catch {
-    alert("Could not read the selected image. Please try again.");
+  } catch (error) {
+    console.error("Failed to update product:", error);
+    setError(
+      error instanceof Error
+        ? error.message
+        : "Could not update the product. Please try again."
+    );
   }
 }
 
@@ -216,7 +259,9 @@ export default function EditProduct() {
             <select
               id="editCategory"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) =>
+              setCategory(e.target.value as SellerProduct["category"])
+             }
               required
               className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-600"
             >
@@ -259,7 +304,7 @@ export default function EditProduct() {
               id="editStatus"
               value={status}
               onChange={(e) =>
-                setStatus(e.target.value as Product["status"])
+                setStatus(e.target.value as SellerProduct["status"])
               }
               className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-600"
             >

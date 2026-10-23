@@ -190,9 +190,12 @@ export const updateProduct = async(
     } catch (error) {
         console.log("update product error", error);
         res.status(500).json({
-            success: false,
-            message: "failed to update"
-        })
+         success: false,
+          message:
+        error instanceof Error
+            ? error.message
+            : "Failed to update product"
+    });
     }
 }
 
