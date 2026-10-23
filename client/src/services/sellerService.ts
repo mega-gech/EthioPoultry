@@ -113,3 +113,52 @@ export async function createProduct(productData:CreateProductData) {
     }
     return result
 }
+
+
+export async function deleteProductById(id: string) {
+  const response = await fetch(`${API_URL}/products/${id}`, {
+    method: "DELETE",
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      result.message || "Failed to delete product"
+    );
+  }
+
+  return result;
+}
+
+export async function updateProductById(
+  id: string,
+  productData: {
+    name: string;
+    description: string;
+    price: number;
+    quantity: string;
+    category: "Eggs" | "Chickens" | "Equipment" | "Feed";
+    image: string;
+    images: string[];
+    location: string;
+    status: "Active" | "Out of Stock";
+  }
+) {
+  const response = await fetch(`${API_URL}/products/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(productData),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || "Failed to update product");
+  }
+
+  return result;
+}
+

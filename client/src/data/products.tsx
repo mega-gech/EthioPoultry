@@ -6,7 +6,7 @@ import stackedEggTrays from "../assets/05_stacked_egg_trays.jpg";
 import eggBasket from "../assets/06_egg_basket.jpg";
 
 export type Product = {
-  id: number;
+  id: any;
   sellerId: number;
   name: string;
   image: string;

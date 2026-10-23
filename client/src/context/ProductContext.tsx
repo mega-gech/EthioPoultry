@@ -15,7 +15,7 @@ type ProductContextType = {
   products: Product[];
   addProduct: (product: Product) => void;
   updateProduct: (updatedProduct: Product) => void;
-  deleteProduct: (id: string) => void;
+  deleteProduct: (id: string ) => void;
 };
 
 const ProductContext = createContext<ProductContextType | undefined>(

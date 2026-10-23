@@ -1,8 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { getProducts, type SellerProduct } from "../../services/sellerService"
+import { getProducts, deleteProductById, type SellerProduct } from "../../services/sellerService"
 import { useNavigate } from "react-router-dom";
-import { useProducts } from "../../context/ProductContext";
 import {
   Search,
   Plus,
@@ -18,7 +17,7 @@ type ProductFilter = "All" | "Active" | "Out of Stock";
 
 export default function SellerProducts() {
   const navigate = useNavigate();
-  const {deleteProduct} = useProducts()
+
 
 
   const [products, setProducts] = useState<SellerProduct[]>([]);
@@ -44,7 +43,38 @@ export default function SellerProducts() {
       }
     }
     loadProducts()
-  })
+  },[])
+
+   if (loading) {
+    return (
+      <main className="flex min-h-[80vh] items-center justify-center bg-[#f6f8f5] px-4 py-16">
+        <p className="text-sm font-medium text-gray-600">
+          Loading product details...
+        </p>
+      </main>
+    );
+  }
+
+   if (error) {
+    return (
+      <main className="flex min-h-[80vh] items-center justify-center bg-[#f6f8f5] px-4 py-16">
+        <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+          <h1 className="text-xl font-bold text-gray-900">
+            Could not load product
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-red-600">{error}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-6 rounded-xl bg-green-700 px-5 py-3 text-sm font-semibold text-white hover:bg-green-800"
+          >
+            Try again
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name
       .toLowerCase()
@@ -57,15 +87,26 @@ export default function SellerProducts() {
   });
 
   
-function handleDelete(id: string) {
+
+async function handleDelete(id: string) {
   const confirmed = window.confirm(
     "Are you sure you want to delete this product?"
   );
 
-  if (confirmed) {
-    deleteProduct(id);
+  if (!confirmed) return;
+
+  try {
+    await deleteProductById(id);
+
+    setProducts((currentProducts) =>
+      currentProducts.filter((product) => product._id !== id)
+    );
+  } catch (error) {
+    console.error("Failed to delete product:", error);
+    setError("Could not delete the product. Please try again.");
   }
 }
+
 
 
   const activeCount = products.filter(
@@ -76,6 +117,7 @@ function handleDelete(id: string) {
     (product) => product.status === "Out of Stock"
   ).length;
 
+   
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
       <div className="mx-auto max-w-7xl">
@@ -248,6 +290,7 @@ function handleDelete(id: string) {
               </tbody>
             </table>
           </div>
+
 
           {filteredProducts.length === 0 && (
             <div className="p-10 text-center">

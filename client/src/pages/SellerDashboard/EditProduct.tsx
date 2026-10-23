@@ -3,7 +3,12 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ImagePlus } from "lucide-react";
 import { useProducts } from "../../context/ProductContext";
-import { products } from "../../data/products";
+import {
+  getProductById,
+  updateProductById,
+  type SellerProduct
+} from "../../services/sellerService";
+
 import type { Product } from "../../data/products";
 
 export default function EditProduct() {
