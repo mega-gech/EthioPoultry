@@ -15,7 +15,7 @@ type ProductContextType = {
   products: Product[];
   addProduct: (product: Product) => void;
   updateProduct: (updatedProduct: Product) => void;
-  deleteProduct: (id: number) => void;
+  deleteProduct: (id: string) => void;
 };
 
 const ProductContext = createContext<ProductContextType | undefined>(
@@ -41,7 +41,7 @@ export function ProductProvider({ children }: ProductProviderProps) {
     );
   }
 
-  function deleteProduct(id: number) {
+  function deleteProduct(id: string) {
     setProducts((currentProducts) =>
       currentProducts.filter((product) => product.id !== id)
     );

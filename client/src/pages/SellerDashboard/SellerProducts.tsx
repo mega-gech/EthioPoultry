@@ -1,7 +1,8 @@
 
-import { useState } from "react";
-import { useProducts } from "../../context/ProductContext";
+import { useState, useEffect } from "react";
+import { getProducts, type SellerProduct } from "../../services/sellerService"
 import { useNavigate } from "react-router-dom";
+import { useProducts } from "../../context/ProductContext";
 import {
   Search,
   Plus,
@@ -11,21 +12,39 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
-import { products as initialProducts } from "../../data/products";
-import type { Product } from "../../data/products";
+
 
 type ProductFilter = "All" | "Active" | "Out of Stock";
 
 export default function SellerProducts() {
   const navigate = useNavigate();
+  const {deleteProduct} = useProducts()
 
 
-const { products, deleteProduct } = useProducts();
-
+  const [products, setProducts] = useState<SellerProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ProductFilter>("All");
-
+  
+  useEffect(()=>{
+    async function loadProducts() {
+      try {
+        setLoading(true)
+        setError("")
+        const result = await getProducts();
+        setProducts(result)
+      } catch (error) {
+        setError(
+          error instanceof Error ? error.message: "failed to load products"
+        )
+      } finally{
+        setLoading(false)
+      }
+    }
+    loadProducts()
+  })
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name
       .toLowerCase()
@@ -38,7 +57,7 @@ const { products, deleteProduct } = useProducts();
   });
 
   
-function handleDelete(id: number) {
+function handleDelete(id: string) {
   const confirmed = window.confirm(
     "Are you sure you want to delete this product?"
   );
@@ -157,7 +176,7 @@ function handleDelete(id: number) {
 
               <tbody className="divide-y divide-gray-100">
                 {filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50">
+                  <tr key={product._id} className="hover:bg-gray-50">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <img
@@ -205,7 +224,7 @@ function handleDelete(id: number) {
                           aria-label={`Edit ${product.name}`}
                           onClick={() =>
                             navigate(
-                              `/seller/products/edit/${product.id}`
+                              `/seller/products/edit/${product._id}`
                             )
                           }
                           className="rounded-lg border p-2 text-blue-600 hover:bg-blue-50"
@@ -217,7 +236,7 @@ function handleDelete(id: number) {
                           type="button"
                           title="Delete product"
                           aria-label={`Delete ${product.name}`}
-                          onClick={() => handleDelete(product.id)}
+                          onClick={() => handleDelete(product._id)}
                           className="rounded-lg border p-2 text-red-600 hover:bg-red-50"
                         >
                           <Trash2 size={16} />

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
   ArrowLeft,
   ImagePlus,
@@ -12,9 +13,9 @@ import {
   LoaderCircle,
 } from "lucide-react";
 
-import { useProducts } from "../../context/ProductContext";
+
 import {createProduct} from "../../services/sellerService"
-import type { Product } from "../../data/products";
+
 
 type ProductCategory = "Eggs" | "Chickens" | "Equipment" | "Feed";
 type QuantityUnit = "pcs" | "tray" | "kg" | "bag";
@@ -49,7 +50,7 @@ function fileToDataUrl(file: File): Promise<string> {
 
 export default function AddProduct() {
   const navigate = useNavigate();
-  const { addProduct } = useProducts();
+  
 
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
