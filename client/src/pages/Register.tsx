@@ -1,6 +1,6 @@
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   UserRound,
   Mail,
@@ -29,6 +29,7 @@ type RegisterFormData = {
 export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const navigate = useNavigate()
 
   const [formData, setFormData] = useState<RegisterFormData>({
     fullName: "",
@@ -97,21 +98,50 @@ export default function Register() {
       setError("Please agree to the Terms of Service and Privacy Policy.");
       return;
     }
+      
+   setIsSubmitting(true);
 
-    // TODO: Send the registration data to your backend API.
-    // Do not treat frontend validation as successful registration.
+   try {
+      const response = await fetch(
+      "http://localhost:5000/api/auth/register",
+      {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: fullName,
+        email,
+        phone: formData.phone.trim(),
+        role: formData.role,
+        password: formData.password,
+      }),
+     }
+     );
 
-    setIsSubmitting(true);
+     const data = await response.json();
 
-    try {
-      // Temporary demonstration until the backend is connected.
-      setMessage(
-        `Your form is valid for a ${formData.role} account. Backend registration is not connected yet.`
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+     if (!response.ok) {
+     setError(data.message || "Registration failed.");
+     return;
+     }
+    localStorage.setItem("token", data.token);
+  localStorage.setItem("user", JSON.stringify(data.user));
+
+  if (data.user.role === "seller") {
+  navigate("/seller/dashboard");
+ } else if (data.user.role === "buyer") {
+  navigate("/buyer/dashboard");
+ } else {
+  navigate("/");
+ }
+
+ } catch (error) {
+  setError("Unable to connect to the server. Please try again.");
+ } finally {
+  setIsSubmitting(false);
+ }
+}
 
   const inputClass =
     "w-full rounded-lg border border-gray-300 bg-white py-3 pl-11 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-400 focus:border-green-600 focus:ring-4 focus:ring-green-100";
@@ -527,4 +557,4 @@ export default function Register() {
       </div>
     </main>
   );
-}
+  }

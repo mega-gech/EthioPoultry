@@ -51,7 +51,7 @@ export const register = async (
         }
 
         // 2. Enforce a minimum password length.
-        if (password.length < 4) {
+        if (password.length < 8) {
             res.status(400).json({
                 success: false,
                 message: "Password must be at least 8 characters"
