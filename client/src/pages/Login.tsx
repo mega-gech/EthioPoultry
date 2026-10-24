@@ -22,7 +22,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async(e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     setError("");
@@ -33,12 +33,53 @@ export default function Login() {
       return;
     }
 
-    // TODO: Connect to your backend authentication API.
-    // Navigate only after the server confirms successful login.
-    setMessage(
-      "The login form is ready, but authentication is not connected yet."
-    );
-  };
+    console.log("Email being sent:", JSON.stringify(email.trim()));
+    console.log("Password length:", password.length);
+
+    try
+    {
+     const response = await fetch(
+    "http://localhost:5000/api/auth/login",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: email.trim(),
+        password: password,
+      }),
+    }
+  );
+
+  const data = await response.json();
+
+  console.log("Login status:", response.status);
+  console.log("Login response:", data);
+
+  if (!response.ok) {
+    setError(data.message || "Login failed.");
+    return;
+  }
+
+  setMessage("Login successful!");
+  localStorage.setItem("token", data.token);
+  localStorage.setItem("user", JSON.stringify(data.user));
+
+ setMessage("Login successful!");
+ 
+if (data.user.role === "seller") {
+  navigate("/seller/dashboard");
+} else if (data.user.role === "buyer") {
+  navigate("/buyer/dashboard");
+} else {
+  navigate("/");
+}
+
+ } catch (error) {
+  setError("Unable to connect to the server. Please try again.");
+}
+};
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-6 sm:px-6 sm:py-10">
