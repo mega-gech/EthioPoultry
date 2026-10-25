@@ -14,6 +14,7 @@ import SellerDashboard from "./pages/SellerDashboard/SellerDashboard";
 import SellerProducts from './pages/SellerDashboard/SellerProducts';
 import AddProduct from './pages/SellerDashboard/AddProduct';
 import EditProduct from './pages/SellerDashboard/EditProduct';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -24,16 +25,29 @@ function App() {
         <Route path='/sellerProfile/:id' element={<SellerProfile />}/>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/buyerprofile" element={<BuyerProfile />} />
-        <Route path="/buyer/dashboard" element={<BuyerDashboard />} />
-        <Route path="/buyer/orders" element={<BuyerOrders />} />
-        <Route path='/buyer/favorites' element={<BuyerFavorites/>} />
-        <Route path='/buyer/settings' element={<BuyerSettings />} />
-        <Route  path="/seller/dashboard"  element={<SellerDashboard />} />
-        <Route  path="/seller/products"  element={<SellerProducts />} />
-        <Route  path="/seller/products/add"  element={<AddProduct />} />
-        <Route  path="/seller/products/edit/:id"  element={<EditProduct />}/>
-        <Route  path='/seller/profile' element={< SellerProfile/>} />
+
+        
+{/* Buyer-only pages */}
+<Route element={<ProtectedRoute allowedRole="buyer" />}>
+  <Route path="/buyerprofile" element={<BuyerProfile />} />
+  <Route path="/buyer/dashboard" element={<BuyerDashboard />} />
+  <Route path="/buyer/orders" element={<BuyerOrders />} />
+  <Route path="/buyer/favorites" element={<BuyerFavorites />} />
+  <Route path="/buyer/settings" element={<BuyerSettings />} />
+</Route>
+
+{/* Seller-only pages */}
+<Route element={<ProtectedRoute allowedRole="seller" />}>
+  <Route path="/seller/dashboard" element={<SellerDashboard />} />
+  <Route path="/seller/products" element={<SellerProducts />} />
+  <Route path="/seller/products/add" element={<AddProduct />} />
+  <Route
+    path="/seller/products/edit/:id"
+    element={<EditProduct />}
+  />
+  <Route path="/seller/profile" element={<SellerProfile />} />
+</Route>
+
       </Routes>
   );
 }
