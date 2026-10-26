@@ -14,12 +14,12 @@ const router = Router();
 
 // Public routes: anyone can browse products
 router.get("/", getProducts);
+router.get("/mine", authMiddleWare, getMyProducts);
 router.get("/:id", getProductById);
 
 // Protected routes: a valid JWT is required
 router.post("/", authMiddleWare, createProduct);
 router.put("/:id", authMiddleWare, updateProduct);
-router.get("/mine", authMiddleWare, getMyProducts);
 router.delete("/:id", authMiddleWare, deleteProduct);
 
 export default router;

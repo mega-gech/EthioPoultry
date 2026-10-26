@@ -1,11 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
 declare global {
   namespace Express {
     interface Request {
       user?: {
-        userId: string;
+        userId: string,
+         role: "buyer" | "seller" | "admin";
       };
     }
   }
@@ -56,9 +58,20 @@ export const authMiddleWare = async(
 
   const payload = decoded as TokenPayload;
 
-  req.user = {
-  userId: payload.userId,
-  };
+  const user = await User.findById(payload.userId).select("_id role");
+
+   if (!user) {
+      res.status(401).json({
+      success: false,
+      message: "User account not found",
+     });
+     return;
+   }
+
+   req.user = {
+     userId: user._id.toString(),
+     role: user.role,
+   };
 
   next();
 

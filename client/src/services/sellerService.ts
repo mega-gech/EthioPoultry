@@ -118,10 +118,7 @@ export async function createProduct(productData:CreateProductData) {
           "Content-Type": "application/json",
            Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify({
-            ...productData,
-            sellerId: DEV_SELLER_ID,
-        })
+        body: JSON.stringify(productData)
     });
 
     const result = await response.json();

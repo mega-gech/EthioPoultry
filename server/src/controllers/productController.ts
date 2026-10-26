@@ -33,6 +33,7 @@ export const getMyProducts = async (
   try {
     const userId = req.user?.userId;
 
+
     if (!userId) {
       res.status(401).json({
         success: false,
@@ -104,6 +105,25 @@ export const createProduct = async(
     res:Response
 ):Promise<void>=>{
     try {
+
+        const userId = req.user?.userId;
+
+      if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+      return;
+     }
+
+     if (req.user?.role !== "seller") {
+        res.status(403).json({
+        success: false,
+        message: "Only sellers can create products",
+    });
+    return;
+   }
+
          const {
          name,
          description,
@@ -113,7 +133,6 @@ export const createProduct = async(
          image,
          images,
          location,
-         sellerId,
          rating,
          reviews,
          status,
@@ -127,21 +146,12 @@ export const createProduct = async(
       !quantity ||
       !category ||
       !image ||
-      !location ||
-      !sellerId
+      !location
     ){
         res.status(400).json({
             success: false,
             message: "please provide all required product fields"
         });
-        return;
-    }
-
-    if(!mongoose.isValidObjectId(sellerId)){
-        res.status(400).json({
-            success: false,
-            message: "invalid seller id"
-        })
         return;
     }
 
@@ -154,7 +164,7 @@ export const createProduct = async(
         image,
         images,
         location,
-        sellerId,
+        sellerId: userId,
         rating,
         reviews,
         status,
