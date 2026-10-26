@@ -5,7 +5,8 @@ import {
     getProductById,
     createProduct,
     deleteProduct,
-    updateProduct
+    updateProduct,
+    getMyProducts
 } from "../controllers/productController.js";
 import { authMiddleWare } from "../middleware/authMiddleware.js";
 
@@ -18,6 +19,7 @@ router.get("/:id", getProductById);
 // Protected routes: a valid JWT is required
 router.post("/", authMiddleWare, createProduct);
 router.put("/:id", authMiddleWare, updateProduct);
+router.get("/mine", authMiddleWare, getMyProducts);
 router.delete("/:id", authMiddleWare, deleteProduct);
 
 export default router;

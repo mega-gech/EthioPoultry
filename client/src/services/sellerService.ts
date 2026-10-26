@@ -81,6 +81,7 @@ export async function getProductById(id: string):Promise<SellerProduct> {
 
 export async function getProducts():Promise<SellerProduct[]> {
     const response = await fetch(`${API_URL}/products`);
+
     const result:{
         success: boolean,
          count?: number,
@@ -94,11 +95,28 @@ export async function getProducts():Promise<SellerProduct[]> {
         return result.data;
 }
 
+export async function getMyProducts(): Promise<SellerProduct[]> {
+  const response = await fetch(`${API_URL}/products/mine`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Failed to fetch your products");
+  }
+
+  return result.data;
+}
+
 export async function createProduct(productData:CreateProductData) {
     const response = await fetch(`${API_URL}/products`, {
         method: "POST",
         headers:{
           "Content-Type": "application/json",
+           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({
             ...productData,
@@ -118,6 +136,9 @@ export async function createProduct(productData:CreateProductData) {
 export async function deleteProductById(id: string) {
   const response = await fetch(`${API_URL}/products/${id}`, {
     method: "DELETE",
+    headers: {
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  },
   });
 
   const result = await response.json();
@@ -145,11 +166,15 @@ export async function updateProductById(
     status: "Active" | "Out of Stock";
   }
 ) {
+
+ 
+
   const response = await fetch(`${API_URL}/products/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
-    },
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    }, 
     body: JSON.stringify(productData),
   });
 

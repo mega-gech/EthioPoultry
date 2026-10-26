@@ -26,6 +26,41 @@ export const getProducts = async (
     }
 };
 
+export const getMyProducts = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+      return;
+    }
+
+    const products = await Product.find({
+      sellerId: userId,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      data: products,
+    });
+  } catch (error) {
+    console.error("get my products error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve your products",
+    });
+  }
+};
+
+
 export const getProductById = async(
     req:Request,
     res:Response
@@ -156,6 +191,16 @@ export const updateProduct = async(
 ):Promise<void>=>{
     try {
         const {id} = req.params;
+
+        const userId = req.user?.userId;
+
+        if (!userId) {
+          res.status(401).json({
+            success: false,
+            message: "Authentication required",
+            });
+            return;
+           }
 
         if(!mongoose.isValidObjectId(id)){
             res.status(400).json({

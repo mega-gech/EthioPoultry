@@ -10,7 +10,7 @@ import brownHen from "../../assets/03_brown_hen.jpg";
 import whiteHens from "../../assets/04_white_hens.jpg";
 
 type Product = {
-  id: number;
+  id: string;
   name: string;
   image: string;
   price: number;
@@ -19,21 +19,21 @@ type Product = {
 
 const initialProducts: Product[] = [
   {
-    id: 1,
+    id: "1",
     name: "Fresh Eggs (30 pcs)",
     image: eggTray,
     price: 240,
     status: "Active",
   },
   {
-    id: 2,
+    id: "2",
     name: "Brown Layer Chicken",
     image: brownHen,
     price: 850,
     status: "Active",
   },
   {
-    id: 3,
+    id: "3",
     name: "White Layer Chicken",
     image: whiteHens,
     price: 1200,
@@ -50,7 +50,7 @@ export default function RecentProducts() {
  const recentProducts = products.slice(0, 5);
 
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     const confirmed = window.confirm(
       "Are you sure you want to delete this product?"
     );

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { getProducts, deleteProductById, type SellerProduct } from "../../services/sellerService"
+import { getMyProducts, deleteProductById, type SellerProduct } from "../../services/sellerService"
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -32,7 +32,7 @@ export default function SellerProducts() {
       try {
         setLoading(true)
         setError("")
-        const result = await getProducts();
+        const result = await getMyProducts();
         setProducts(result)
       } catch (error) {
         setError(
