@@ -1,5 +1,17 @@
 export const API_URL = "http://localhost:5000/api";
 
+function getAuthHeaders(): HeadersInit {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    throw new Error("Please log in to continue");
+  }
+
+  return {
+    Authorization: `Bearer ${token}`,
+  };
+}
+
 export interface Seller {
   _id: string;
   name: string;
@@ -94,9 +106,7 @@ export async function getProducts():Promise<SellerProduct[]> {
 
 export async function getMyProducts(): Promise<SellerProduct[]> {
   const response = await fetch(`${API_URL}/products/mine`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
+    headers:getAuthHeaders(),
   });
 
   const result = await response.json();
@@ -111,10 +121,10 @@ export async function getMyProducts(): Promise<SellerProduct[]> {
 export async function createProduct(productData:CreateProductData) {
     const response = await fetch(`${API_URL}/products`, {
         method: "POST",
-        headers:{
-          "Content-Type": "application/json",
-           Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+        headers: {
+     ...getAuthHeaders(),
+  "Content-Type": "application/json",
+},
         body: JSON.stringify(productData)
     });
 
@@ -130,9 +140,7 @@ export async function createProduct(productData:CreateProductData) {
 export async function deleteProductById(id: string) {
   const response = await fetch(`${API_URL}/products/${id}`, {
     method: "DELETE",
-    headers: {
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
-  },
+    headers: getAuthHeaders(),  
   });
 
   const result = await response.json();

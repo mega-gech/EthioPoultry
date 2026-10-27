@@ -23,7 +23,7 @@ function Topbar() {
             <Phone size={15} className="shrink-0" />
 
             <span className="text-xs sm:text-sm">
-              +251 912 345 678
+              +251 932 723 772
             </span>
           </a>
 
@@ -35,7 +35,7 @@ function Topbar() {
             <Mail size={15} className="shrink-0" />
 
             <span className="truncate text-sm">
-              info@henethio.com
+              info@Enqulalie.com
             </span>
           </a>
         </div>

@@ -1,209 +1,141 @@
 
-import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Store,
+} from "lucide-react";
 import hero from "../assets/01_hen_egg_basket.jpg";
 
-const popularSearches = [
-  "Eggs",
-  "Chickens",
-  "Layers",
-  "Broilers",
-  "Chicks",
+type PopularSearch = {
+  label: string;
+  category: string;
+};
+
+const popularSearches: PopularSearch[] = [
+  { label: "Eggs", category: "Eggs" },
+  { label: "Chickens", category: "Chickens" },
+  { label: "Poultry Feed", category: "Feed" },
+  { label: "Equipment", category: "Equipment" },
 ];
 
-const locations = [
-  "Addis Ababa",
-  "Amhara",
-  "Oromia",
-  "Tigray",
+const trustPoints = [
+  "Discover poultry products",
+  "Connect with local suppliers",
+  "Compare available products",
 ];
+
+const buildProductsUrl = (params: Record<string, string>) => {
+  const query = new URLSearchParams(params).toString();
+  return query ? `/products?${query}` : "/products";
+};
 
 const Hero = () => {
-  const navigate = useNavigate();
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [location, setLocation] = useState("");
-
-  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const params = new URLSearchParams();
-
-    if (searchTerm.trim()) {
-      params.set("search", searchTerm.trim());
-    }
-
-    if (location) {
-      params.set("location", location);
-    }
-
-    navigate(`/products?${params.toString()}`);
-  };
-
-  const handlePopularSearch = (category: string) => {
-    const params = new URLSearchParams();
-    params.set("category", category.toLowerCase());
-
-    navigate(`/products?${params.toString()}`);
-  };
-
   return (
     <section
-      aria-label="Find poultry products"
-      className="relative isolate overflow-hidden bg-gray-900"
+      aria-labelledby="hero-heading"
+      className="relative isolate overflow-hidden bg-gray-950"
     >
       {/* Background image */}
       <img
         src={hero}
         alt=""
         aria-hidden="true"
+        fetchPriority="high"
+        decoding="async"
         className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
       />
 
-      {/* Image overlay */}
+      {/* Background overlay */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 -z-10 bg-gradient-to-r from-black/75 via-black/50 to-black/20"
+        className="absolute inset-0 -z-10 bg-gradient-to-r from-gray-950/90 via-gray-950/65 to-gray-950/25"
       />
 
-      {/* Hero content */}
-      <div className="mx-auto flex min-h-[390px] max-w-7xl items-center px-4 py-10 sm:min-h-[420px] sm:px-6 sm:py-12 lg:min-h-[450px] lg:px-8">
+      {/* Compact hero container */}
+      <div className="mx-auto flex min-h-[320px] max-w-7xl items-center px-4 py-6 sm:px-6 sm:py-8 lg:min-h-[350px] lg:px-8 lg:py-8">
         <div className="w-full max-w-2xl text-white">
 
-          {/* Heading */}
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-green-300 sm:text-sm">
-            Ethiopia's Poultry Marketplace
-          </p>
+          {/* Marketplace label */}
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-green-300/30 bg-green-400/10 px-3 py-1 text-xs font-semibold tracking-wide text-green-200">
+            <span
+              aria-hidden="true"
+              className="h-2 w-2 rounded-full bg-green-400"
+            />
+            ETHIOPIA&apos;S POULTRY MARKETPLACE
+          </div>
 
-          <h1 className="max-w-xl text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-            Find Fresh Poultry
-            <br className="hidden sm:block" /> Products Easily!
+          {/* Main heading */}
+          <h1
+            id="hero-heading"
+            className="max-w-xl text-3xl font-extrabold leading-[1.1] tracking-tight sm:text-4xl lg:text-[42px]"
+          >
+            Your Poultry Needs,
+            <span className="mt-1 block text-green-300">
+              All in One Place.
+            </span>
           </h1>
 
-          <p className="mt-4 max-w-lg text-sm leading-6 text-white/90 sm:text-base sm:leading-7">
-            Connect directly with farmers and suppliers to find quality
-            poultry products at competitive prices.
+          {/* Description */}
+          <p className="mt-2 max-w-xl text-sm leading-6 text-gray-200 sm:text-base">
+            Discover fresh eggs, healthy chickens, poultry feed, and
+            equipment. Connect with poultry suppliers across Ethiopia.
           </p>
 
-          {/* Search form */}
-          <form
-            onSubmit={handleSearch}
-            role="search"
-            className="mt-6 grid grid-cols-1 gap-2 rounded-xl bg-white p-2 shadow-xl sm:grid-cols-[minmax(0,1fr)_175px_auto] sm:gap-2"
+          {/* Popular categories */}
+          <nav
+            aria-label="Popular product categories"
+            className="mt-3 flex flex-wrap items-center gap-2"
           >
-            {/* Product search */}
-            <div className="flex min-w-0 items-center rounded-lg border border-gray-200 px-3 transition focus-within:border-green-600 focus-within:ring-2 focus-within:ring-green-100">
-              <svg
-                aria-hidden="true"
-                className="mr-2 h-5 w-5 shrink-0 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  cx="11"
-                  cy="11"
-                  r="7"
-                  strokeWidth="1.8"
-                />
-                <path
-                  d="m16 16 4 4"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
-              </svg>
-
-              <label className="sr-only" htmlFor="hero-search">
-                Search poultry products
-              </label>
-
-              <input
-                id="hero-search"
-                type="search"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Eggs, chickens, chicks..."
-                className="min-w-0 w-full bg-transparent py-3 text-sm text-gray-800 outline-none placeholder:text-gray-400"
-              />
-            </div>
-
-            {/* Location selector */}
-            <div className="flex items-center rounded-lg border border-gray-200 px-3 transition focus-within:border-green-600 focus-within:ring-2 focus-within:ring-green-100">
-              <svg
-                aria-hidden="true"
-                className="mr-2 h-5 w-5 shrink-0 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"
-                  strokeWidth="1.8"
-                  strokeLinejoin="round"
-                />
-                <circle cx="12" cy="10" r="2.5" strokeWidth="1.8" />
-              </svg>
-
-              <label className="sr-only" htmlFor="hero-location">
-                Filter by location
-              </label>
-
-              <select
-                id="hero-location"
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-                className="min-w-0 w-full cursor-pointer bg-transparent py-3 text-sm text-gray-700 outline-none"
-              >
-                <option value="">All locations</option>
-
-                {locations.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Search button */}
-            <button
-              type="submit"
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 active:scale-[0.98]"
-            >
-              Search
-              <svg
-                aria-hidden="true"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  d="M5 12h14m-6-6 6 6-6 6"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </form>
-
-          {/* Popular searches */}
-          <div className="mt-5 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-            <span className="mr-1 font-medium text-white/90">
-              Popular:
+            <span className="mr-1 text-xs font-medium text-gray-200 sm:text-sm">
+              Explore:
             </span>
 
-            {popularSearches.map((category) => (
-              <button
+            {popularSearches.map(({ label, category }) => (
+              <Link
                 key={category}
-                type="button"
-                onClick={() => handlePopularSearch(category)}
-                className="rounded-full border border-white/30 bg-white/10 px-3 py-1.5 font-medium text-white backdrop-blur-sm transition hover:border-green-300 hover:bg-green-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                to={buildProductsUrl({ category })}
+                className="rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm transition hover:border-green-300 hover:bg-green-600/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:text-sm"
               >
-                {category}
-              </button>
+                {label}
+              </Link>
             ))}
+          </nav>
+
+          {/* Main actions */}
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Link
+              to="/products"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-green-600 px-5 py-2 text-sm font-bold text-white transition hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+            >
+              Browse Products
+              <ArrowRight
+                aria-hidden="true"
+                className="h-4 w-4"
+              />
+            </Link>
+
+            <Link
+              to="/login"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-white/35 bg-white/5 px-5 py-2 text-sm font-semibold text-white backdrop-blur-sm transition hover:border-green-300 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <Store aria-hidden="true" className="h-4 w-4" />
+              Start Selling
+            </Link>
           </div>
+
+          {/* Trust points */}
+          <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-white/20 pt-3 text-xs text-gray-200 sm:text-sm">
+            {trustPoints.map((point) => (
+              <li key={point} className="flex items-center gap-1.5">
+                <CheckCircle2
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5 shrink-0 text-green-300"
+                />
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
 
         </div>
       </div>

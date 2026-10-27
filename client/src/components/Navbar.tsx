@@ -1,79 +1,178 @@
-
-import { useEffect, useState } from "react";
-import type { MouseEvent } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import {
-  Menu,
-  X,
-  UserRound,
-  Plus,
-  ChevronRight,
-} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Menu, X, UserRound, Plus, ChevronRight } from "lucide-react";
 
 import logo from "../assets/hen_logo.png";
 
+const navLinks = [
+  { name: "Home", href: "/" },
+  { name: "Products", href: "/products" },
+  { name: "About Us", href: "/#about" },
+  { name: "Learn", href: "/#learn" },
+  { name: "Health & Tips", href: "/#health" },
+  { name: "Market Prices", href: "/#prices" },
+  { name: "Contact", href: "/#contact" },
+];
+
+const LOGIN_ROUTE = "/login";
+const POST_AD_ROUTE = "/seller/dashboard";
+
 function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
 
-  const navigate = useNavigate();
+  const navRef = useRef<HTMLElement>(null);
   const location = useLocation();
 
-  const navLinks = [
-    { name: "Home", href: "/" },
-    { name: "Products", href: "/products" },
-    { name: "About Us", href: "/#about" },
-    { name: "Learn", href: "/#learn" },
-    { name: "Health & Tips", href: "/#health" },
-    { name: "Market Prices", href: "/#prices" },
-    { name: "Contact", href: "/#contact" },
-  ];
+  const closeMenu = () => setIsMenuOpen(false);
 
-  // Close the mobile menu whenever the route changes.
+  // Scroll to the correct section after navigation.
   useEffect(() => {
-    setIsMenuOpen(false);
-  }, [location.pathname, location.hash]);
+    let frame = 0;
 
-  // Scroll after the Home page and its sections have rendered.
-  useEffect(() => {
-    if (location.pathname !== "/") return;
+    const scrollToTarget = () => {
+      cancelAnimationFrame(frame);
 
-    const frame = window.requestAnimationFrame(() => {
-      if (location.hash) {
-        const sectionId = location.hash.slice(1);
-        const element = document.getElementById(sectionId);
+      frame = requestAnimationFrame(() => {
+        // Normal page links, such as Home or Products.
+        if (!location.hash) {
+          if (location.pathname === "/") {
+            window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+          }
+          return;
+        }
 
-        element?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      } else {
+        // Section links only apply to the Home page.
+        if (location.pathname !== "/") return;
+
+        const id = decodeURIComponent(location.hash.slice(1));
+        const element = document.getElementById(id);
+
+        // Wait briefly for the target section to exist in the DOM.
+        if (!element) return;
+
+        const navHeight = navRef.current?.offsetHeight ?? 64;
+        const top =
+          element.getBoundingClientRect().top +
+          window.scrollY -
+          navHeight -
+          8;
+
         window.scrollTo({
-          top: 0,
+          top: Math.max(0, top),
+          left: 0,
           behavior: "smooth",
         });
-      }
-    });
+      });
+    };
 
-    return () => window.cancelAnimationFrame(frame);
+    scrollToTarget();
+
+    return () => cancelAnimationFrame(frame);
+  }, [location.pathname, location.hash, location.key]);
+
+  // Close the mobile menu when the route changes.
+  useEffect(() => {
+    setIsMenuOpen(false);
   }, [location.pathname, location.hash]);
 
-  // Handle desktop and mobile navigation consistently.
-  const handleNavClick = (
-    e: MouseEvent<HTMLAnchorElement>,
-    href: string
-  ) => {
-    e.preventDefault();
-    setIsMenuOpen(false);
-    navigate(href);
-  };
+  // Update navbar shadow when scrolling.
+  useEffect(() => {
+    const onScroll = () => {
+      setIsScrolled(window.scrollY > 8);
+    };
 
-  // Determine which link should appear active.
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Support Escape and lock background scrolling while the mobile menu is open.
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeMenu();
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isMenuOpen]);
+
+  // Track the current section for the active navigation style.
+  useEffect(() => {
+    if (location.pathname !== "/") {
+      setActiveSection("");
+      return;
+    }
+
+    let frame = 0;
+
+    const updateActiveSection = () => {
+      cancelAnimationFrame(frame);
+
+      frame = requestAnimationFrame(() => {
+        const navHeight = navRef.current?.offsetHeight ?? 64;
+        const trackingLine = navHeight + 100;
+
+        const sectionIds = navLinks
+          .filter((link) => link.href.startsWith("/#"))
+          .map((link) => link.href.slice(2));
+
+        let currentSection = "";
+
+        for (const id of sectionIds) {
+          const element = document.getElementById(id);
+
+          if (
+            element &&
+            element.getBoundingClientRect().top <= trackingLine
+          ) {
+            currentSection = id;
+          }
+        }
+
+        const atBottom =
+          window.innerHeight + window.scrollY >=
+          document.documentElement.scrollHeight - 4;
+
+        if (atBottom) {
+          for (let i = sectionIds.length - 1; i >= 0; i--) {
+            if (document.getElementById(sectionIds[i])) {
+              currentSection = sectionIds[i];
+              break;
+            }
+          }
+        }
+
+        setActiveSection(currentSection);
+      });
+    };
+
+    updateActiveSection();
+    window.addEventListener("scroll", updateActiveSection, {
+      passive: true,
+    });
+    window.addEventListener("resize", updateActiveSection);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", updateActiveSection);
+      window.removeEventListener("resize", updateActiveSection);
+    };
+  }, [location.pathname]);
+
   const isActive = (href: string) => {
     if (href === "/") {
-      return (
-        location.pathname === "/" &&
-        !location.hash
-      );
+      return location.pathname === "/" && !activeSection;
     }
 
     if (href === "/products") {
@@ -86,193 +185,185 @@ function Navbar() {
     if (href.startsWith("/#")) {
       return (
         location.pathname === "/" &&
-        location.hash === href.slice(1)
+        activeSection === href.slice(2)
       );
     }
 
     return location.pathname === href;
   };
 
-  // Shared login navigation for both layouts.
-  const handleLogin = () => {
-    setIsMenuOpen(false);
-    navigate("/login");
-  };
-
-  // Temporary destination until the create-listing route is ready.
-  const handlePostAd = () => {
-    setIsMenuOpen(false);
-    navigate("/seller/dashboard");
-  };
-
   return (
-    <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-md">
-     <div className="mx-auto w-full max-w-7xl px-3 sm:px-5 lg:px-6 xl:px-8">
-
+    <nav
+      ref={navRef}
+      aria-label="Main navigation"
+      className={`sticky top-0 z-50 border-b bg-white/95 backdrop-blur-md transition-shadow duration-200 ${
+        isScrolled
+          ? "border-gray-200 shadow-md"
+          : "border-transparent shadow-none"
+      }`}
+    >
+      <div className="mx-auto w-full max-w-7xl px-3 sm:px-5 lg:px-6 xl:px-8">
         {/* Main navbar */}
-        <div className="flex min-h-[68px] items-center justify-between gap-2 sm:min-h-[72px] lg:gap-3">
-
-          {/* Brand / Logo */}
-          <a
-            href="/"
-            onClick={(e) => handleNavClick(e, "/")}
+        <div className="flex h-14 items-center justify-between gap-2 sm:h-16 lg:gap-3">
+          {/* Logo and brand */}
+          <Link
+            to="/"
             aria-label="Enqulalie home"
-            className="flex shrink-0 items-center gap-2"
+            onClick={closeMenu}
+            className="flex shrink-0 items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
           >
             <img
               src={logo}
               alt="Enqulalie chicken logo"
-              className="h-10 w-10 shrink-0 object-contain sm:h-12 sm:w-12 lg:h-14 lg:w-14"
+              className="h-8 w-8 shrink-0 object-contain sm:h-10 sm:w-10"
             />
 
-            <div className="leading-tight">
-              <div className="text-lg font-extrabold tracking-tight sm:text-xl lg:text-2xl">
+            <div className="leading-none">
+              <div className="text-base font-extrabold tracking-tight sm:text-lg lg:text-xl">
                 <span className="text-green-800">Enqu</span>
                 <span className="text-orange-500">lalie</span>
               </div>
 
-               <p className="mt-1 text-[9px] text-gray-500 sm:text-[10px] lg:text-xs">
+              <p className="mt-0.5 hidden text-[10px] text-gray-500 sm:block lg:text-[11px]">
                 Your Poultry Partner
               </p>
             </div>
-          </a>
+          </Link>
 
           {/* Desktop navigation */}
-          <div className="hidden flex-1 items-center justify-center lg:flex">
-            <div className="flex items-center gap-1 xl:gap-2">
+          <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
+            <ul className="flex items-center gap-0.5 xl:gap-1">
               {navLinks.map((link) => {
                 const active = isActive(link.href);
 
                 return (
-                  <a
-                    key={link.name}
-                    href={link.href}
-                    onClick={(e) =>
-                      handleNavClick(e, link.href)
-                    }
-                    aria-current={active ? "page" : undefined}
-                    className={`relative whitespace-nowrap rounded-lg px-2 py-3 text-[13px] font-semibold transition-colors xl:px-2.5 xl:text-sm ${
-                      active
-                        ? "bg-green-50 text-green-800"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-green-800"
-                    }`}
-                  >
-                    {link.name}
+                  <li key={link.name}>
+                    <Link
+                      to={link.href}
+                      aria-current={
+                        active
+                          ? link.href.startsWith("/#")
+                            ? "location"
+                            : "page"
+                          : undefined
+                      }
+                      className={`relative block whitespace-nowrap rounded-lg px-1.5 py-2 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 sm:px-2 sm:text-xs xl:px-2.5 xl:text-sm ${
+                        active
+                          ? "bg-green-50 text-green-800"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-green-800"
+                      }`}
+                    >
+                      {link.name}
 
-                    {active && (
-                      <span className="absolute inset-x-2 -bottom-1 h-[3px] rounded-full bg-green-700" />
-                    )}
-                  </a>
+                      {active && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-green-700"
+                        />
+                      )}
+                    </Link>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           </div>
 
           {/* Desktop actions */}
-          <div className="hidden shrink-0 items-center gap-2 xl:gap-3 lg:flex">
-
-            <button
-              type="button"
-              onClick={handleLogin}
-              className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-green-700 hover:bg-green-50 hover:text-green-800 xl:px-4"
+          <div className="hidden shrink-0 items-center gap-1.5 lg:flex xl:gap-2">
+            <Link
+              to={LOGIN_ROUTE}
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 transition hover:border-green-700 hover:bg-green-50 hover:text-green-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 xl:gap-2 xl:px-3 xl:text-sm"
             >
-              <UserRound size={17} />
+              <UserRound size={16} />
               Login / Register
-            </button>
+            </Link>
 
-            <button
-              type="button"
-              onClick={handlePostAd}
-              className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg bg-green-700 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-green-800 hover:shadow-md xl:px-4"
+            <Link
+              to={POST_AD_ROUTE}
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-green-700 px-2 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-green-800 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2 xl:gap-2 xl:px-3 xl:text-sm"
             >
               Post an Ad
-
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-green-700">
                 <Plus size={14} strokeWidth={3} />
               </span>
-            </button>
+            </Link>
           </div>
 
           {/* Mobile menu toggle */}
           <button
             type="button"
             aria-label={
-              isMenuOpen
-                ? "Close navigation menu"
-                : "Open navigation menu"
+              isMenuOpen ? "Close navigation menu" : "Open navigation menu"
             }
             aria-expanded={isMenuOpen}
             aria-controls="mobile-navigation"
             onClick={() => setIsMenuOpen((open) => !open)}
-            className="rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-700 lg:hidden"
+            className="rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 lg:hidden"
           >
-            {isMenuOpen ? (
-              <X size={26} />
-            ) : (
-              <Menu size={26} />
-            )}
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
 
-        {/* Mobile navigation */}
+        {/* Mobile and tablet navigation */}
         {isMenuOpen && (
           <div
             id="mobile-navigation"
-            className="border-t border-gray-100 pb-5 lg:hidden"
+            className="max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-t border-gray-100 pb-4 lg:hidden"
           >
-            <div className="flex flex-col gap-1 pt-3">
+            <ul className="flex flex-col gap-1 pt-3">
               {navLinks.map((link) => {
                 const active = isActive(link.href);
 
                 return (
-                  <a
-                    key={link.name}
-                    href={link.href}
-                    onClick={(e) =>
-                      handleNavClick(e, link.href)
-                    }
-                    aria-current={active ? "page" : undefined}
-                    className={`flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold transition ${
-                      active
-                        ? "bg-green-50 text-green-800"
-                        : "text-gray-700 hover:bg-gray-50 hover:text-green-800"
-                    }`}
-                  >
-                    {link.name}
+                  <li key={link.name}>
+                    <Link
+                      to={link.href}
+                      onClick={closeMenu}
+                      aria-current={
+                        active
+                          ? link.href.startsWith("/#")
+                            ? "location"
+                            : "page"
+                          : undefined
+                      }
+                      className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 ${
+                        active
+                          ? "bg-green-50 text-green-800"
+                          : "text-gray-700 hover:bg-gray-50 hover:text-green-800"
+                      }`}
+                    >
+                      {link.name}
 
-                    {active && (
-                      <ChevronRight
-                        size={17}
-                        className="text-green-700"
-                      />
-                    )}
-                  </a>
+                      {active && (
+                        <ChevronRight size={17} className="text-green-700" />
+                      )}
+                    </Link>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
 
             {/* Mobile actions */}
-            <div className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4">
-              <button
-                type="button"
-                onClick={handleLogin}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-green-700 hover:bg-green-50 hover:text-green-800"
+            <div className="mt-3 flex flex-col gap-2 border-t border-gray-100 pt-3">
+              <Link
+                to={LOGIN_ROUTE}
+                onClick={closeMenu}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-green-700 hover:bg-green-50 hover:text-green-800"
               >
                 <UserRound size={18} />
                 Login / Register
-              </button>
+              </Link>
 
-              <button
-                type="button"
-                onClick={handlePostAd}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-800"
+              <Link
+                to={POST_AD_ROUTE}
+                onClick={closeMenu}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-800"
               >
                 Post an Ad
-
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-green-700">
                   <Plus size={14} strokeWidth={3} />
                 </span>
-              </button>
+              </Link>
             </div>
           </div>
         )}
