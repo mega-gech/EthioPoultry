@@ -76,8 +76,19 @@ export const register = async (
         }
 
         // 5. Allow buyer or seller registration, not admin.
-        const userRole =
-            role === "seller" ? "seller" : "buyer";
+        if (
+           role !== undefined &&
+           role !== "buyer" &&
+           role !== "seller"
+       ) {
+        res.status(400).json({
+        success: false,
+        message: "Role must be buyer or seller",
+    });
+    return;
+  } 
+
+const userRole = role ?? "buyer";
 
         // 6. Hash the password before saving it.
         const hashedPassword = await bcrypt.hash(password, 12);

@@ -1,62 +1,50 @@
-
-
 import { useNavigate } from "react-router-dom";
 import { Pencil, Trash2, Package, Plus } from "lucide-react";
-import { useProducts } from "../../context/ProductContext";
-
-
-import eggTray from "../../assets/02_egg_tray.jpg";
-import brownHen from "../../assets/03_brown_hen.jpg";
-import whiteHens from "../../assets/04_white_hens.jpg";
-
-type Product = {
-  id: string;
-  name: string;
-  image: string;
-  price: number;
-  status: "Active" | "Out of Stock";
-};
-
-const initialProducts: Product[] = [
-  {
-    id: "1",
-    name: "Fresh Eggs (30 pcs)",
-    image: eggTray,
-    price: 240,
-    status: "Active",
-  },
-  {
-    id: "2",
-    name: "Brown Layer Chicken",
-    image: brownHen,
-    price: 850,
-    status: "Active",
-  },
-  {
-    id: "3",
-    name: "White Layer Chicken",
-    image: whiteHens,
-    price: 1200,
-    status: "Out of Stock",
-  },
-];
+import { useEffect, useState } from "react";
+import {
+  getMyProducts,
+  deleteProductById,
+  type SellerProduct,
+} from "../../services/sellerService";
 
 export default function RecentProducts() {
   const navigate = useNavigate();
+  const [products, setProducts] = useState<SellerProduct[]>([]);
+  const [loading, setLoading] = useState(true);
 
- 
- const { products, deleteProduct } = useProducts();
+useEffect(() => {
+  const loadProducts = async () => {
+    try {
+      const data = await getMyProducts();
+      setProducts(data);
+    } catch (error) {
+      console.error("Failed to load recent products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
- const recentProducts = products.slice(0, 5);
+  loadProducts();
+}, []);
+
+const recentProducts = products.slice(0, 5);
 
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const confirmed = window.confirm(
       "Are you sure you want to delete this product?"
     );
 
     if (!confirmed) return;
-     deleteProduct(id)
+     try {
+    await deleteProductById(id);
+    setProducts((current) =>
+    current.filter((product) => product._id !== id)
+  );
+  } catch (error) {
+  console.error("Failed to delete product:", error);
+  window.alert("Failed to delete product. Please try again.");
+  }
   };
 
   return (
@@ -83,8 +71,19 @@ export default function RecentProducts() {
         </button>
       </div>
 
+      {/* Loading state */}
+   {loading && (
+    <div className="px-5 py-12 text-center">
+    <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-700" />
+
+    <p className="mt-3 text-sm text-gray-500">
+      Loading recent products...
+    </p>
+    </div>
+  )}
+
       {/* Product table */}
-      <div className="overflow-x-auto">
+      {!loading && (<div className="overflow-x-auto">
         <table className="w-full min-w-[650px] text-left">
           <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
             <tr>
@@ -109,7 +108,7 @@ export default function RecentProducts() {
           <tbody className="divide-y divide-gray-100">
             {recentProducts.map((product) => (
               <tr
-                key={product.id}
+                key={product._id}
                 className="transition hover:bg-gray-50"
               >
                 {/* Product image and name */}
@@ -154,7 +153,7 @@ export default function RecentProducts() {
                       type="button"
                       onClick={() =>
                         navigate(
-                          `/seller/products/edit/${product.id}`
+                          `/seller/products/edit/${product._id}`
                         )
                       }
                       title="Edit product"
@@ -166,7 +165,7 @@ export default function RecentProducts() {
 
                     <button
                       type="button"
-                      onClick={() => handleDelete(product.id)}
+                      onClick={() => handleDelete(product._id)}
                       title="Delete product"
                       aria-label={`Delete ${product.name}`}
                       className="rounded-lg border border-gray-200 p-2 text-red-600 transition hover:bg-red-50"
@@ -180,9 +179,10 @@ export default function RecentProducts() {
           </tbody>
         </table>
       </div>
+      )}
 
       {/* Empty state */}
-      {products.length === 0 && (
+      {!loading && products.length === 0 && (
         <div className="px-5 py-12 text-center">
           <Package
             size={36}

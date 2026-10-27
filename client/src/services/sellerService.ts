@@ -1,7 +1,4 @@
-
-
 export const API_URL = "http://localhost:5000/api";
-const DEV_SELLER_ID = "6ad64a630ce00a62094a96d9";
 
 export interface Seller {
   _id: string;

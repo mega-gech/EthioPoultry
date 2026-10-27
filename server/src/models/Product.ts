@@ -29,10 +29,15 @@ export interface IProduct extends Document {
 const productSchema = new Schema<IProduct>(
   {
     name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+  type: String,
+  required: true,
+  trim: true,
+  minlength: [2, "Product name must be at least 2 characters"],
+  validate: {
+    validator: (value: string) => value.trim().length > 0,
+    message: "Product name cannot be empty",
+  },
+ },
 
     description: {
       type: String,
@@ -43,14 +48,18 @@ const productSchema = new Schema<IProduct>(
     price: {
       type: Number,
       required: true,
-      min: 0,
+      min: 0.01,
     },
 
-    quantity: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+   quantity: {
+    type: String,
+    required: true,
+    trim: true,
+    validate: {
+    validator: (value: string) => value.trim().length > 0,
+    message: "Quantity cannot be empty",
+   },
+  },
 
     category: {
       type: String,

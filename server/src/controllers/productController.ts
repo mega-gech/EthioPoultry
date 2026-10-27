@@ -42,6 +42,14 @@ export const getMyProducts = async (
       return;
     }
 
+    if (req.user?.role !== "seller") {
+      res.status(403).json({
+      success: false,
+      message: "Only sellers can access their products",
+     });
+     return;
+    }
+
     const products = await Product.find({
       sellerId: userId,
     }).sort({ createdAt: -1 });
@@ -134,8 +142,6 @@ export const createProduct = async(
          images,
          location,
          rating,
-         reviews,
-         status,
       } = req.body;
 
     if (
@@ -166,8 +172,6 @@ export const createProduct = async(
         location,
         sellerId: userId,
         rating,
-        reviews,
-        status,
     })
 
     res.status(201).json({
@@ -237,6 +241,14 @@ export const updateProduct = async(
          });
          return;
          }
+
+         if (req.user?.role !== "seller") {
+           res.status(403).json({
+           success: false,
+           message: "Only sellers can update products",
+         });
+           return;
+        }
         
          const {
             name,
@@ -269,6 +281,18 @@ export const updateProduct = async(
         })
     } catch (error) {
         console.log("update product error", error);
+
+        if (
+           error instanceof mongoose.Error.ValidationError ||
+           error instanceof mongoose.Error.CastError
+          ) {
+         res.status(400).json({
+         success: false,
+         message: "Invalid product data",
+         });
+        return;
+        }
+
         res.status(500).json({
          success: false,
           message:
@@ -285,6 +309,23 @@ export const deleteProduct = async(
 ):Promise<void>=>{
     try {
         const {id} = req.params;
+        const userId = req.user?.userId;
+        
+         if (!userId) {
+           res.status(401).json({
+          success: false,
+          message: "Authentication required",
+         });
+         return;
+        }
+
+        if (req.user?.role !== "seller") {
+           res.status(403).json({
+           success: false,
+          message: "Only sellers can delete products",
+      });
+       return;
+     }
 
         if(!mongoose.isValidObjectId(id)){
             res.status(400).json({
@@ -294,7 +335,7 @@ export const deleteProduct = async(
             return
         }
 
-        const deletedProduct = await Product.findByIdAndDelete(id);
+        const deletedProduct = await Product.findById(id);
 
         if(!deletedProduct){
             res.status(404).json({
@@ -303,6 +344,16 @@ export const deleteProduct = async(
             })
             return
         }
+
+        if (deletedProduct.sellerId.toString() !== userId) {
+         res.status(403).json({
+         success: false,
+         message: "You are not allowed to delete this product",
+        });
+        return;
+        }
+
+        await deletedProduct.deleteOne();
 
         res.status(200).json({
             success: true,

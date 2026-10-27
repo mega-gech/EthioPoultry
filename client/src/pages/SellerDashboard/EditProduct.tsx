@@ -23,7 +23,8 @@ export default function EditProduct() {
   const [status, setStatus] = useState<SellerProduct["status"]>("Active");
   const [image, setImage] = useState<File | null>(null);
   const [error, setError] = useState("");
-
+  const [submitting, setSubmitting] = useState(false);
+  
   useEffect(() => {
   async function loadProduct() {
     if (!id) {
@@ -126,6 +127,7 @@ if (!product) {
 
   try {
     setError("");
+    setSubmitting(true);
 
     const imageUrl = image
       ? await fileToDataUrl(image)
@@ -157,7 +159,9 @@ if (!product) {
         ? error.message
         : "Could not update the product. Please try again."
     );
-  }
+  } finally {
+  setSubmitting(false);
+}
 }
 
 
@@ -400,12 +404,13 @@ if (!product) {
               Cancel
             </button>
 
-            <button
-              type="submit"
-              className="rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800"
-            >
-              Save Changes
-            </button>
+           <button
+             type="submit"
+             disabled={submitting}
+             className="rounded-lg bg-emerald-700 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+             >
+             {submitting ? "Submitting..." : "Save Changes"}
+             </button>
           </div>
         </form>
       </div>
