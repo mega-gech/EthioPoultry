@@ -16,6 +16,13 @@ import {
   X,
 } from "lucide-react";
 
+type LoggedInUser = {
+  id?: string;
+  name: string;
+  email: string;
+  role: "buyer" | "seller" | "admin";
+};
+
 import DashboardStats from "./DashboardStats";
 import RecentProducts from "./RecentProducts";
 
@@ -31,6 +38,20 @@ const navigation = [
 
 export default function SellerDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const [user] = useState<LoggedInUser | null>(() => {
+  const storedUser = localStorage.getItem("user");
+
+  if (!storedUser) return null;
+
+  try {
+    return JSON.parse(storedUser) as LoggedInUser;
+  } catch {
+    return null;
+  }
+});
+
+  const sellerName = user?.name || "Seller";
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -66,7 +87,7 @@ export default function SellerDashboard() {
             </div>
 
             <div>
-              <h1 className="text-lg font-bold">EthioPoultry</h1>
+              <h1 className="text-lg font-bold">Enqulalie</h1>
               <p className="text-xs text-emerald-200">
                 Seller Center
               </p>
@@ -164,12 +185,12 @@ export default function SellerDashboard() {
 
             <div className="flex items-center gap-2 border-l border-gray-200 pl-3 sm:gap-3 sm:pl-4">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-800">
-                A
+                {sellerName.charAt(0).toUpperCase()}
               </div>
 
               <div className="hidden sm:block">
                 <p className="text-sm font-semibold text-gray-900">
-                  Abebe
+                  {sellerName}
                 </p>
                 <p className="text-xs text-gray-500">
                   Seller Account
@@ -183,7 +204,7 @@ export default function SellerDashboard() {
         <section className="p-4 sm:p-6 md:p-8">
           <div>
             <h2 className="text-xl font-bold text-gray-900 sm:text-2xl">
-              Welcome back, Abebe!
+              Welcome back, {sellerName}!
             </h2>
 
             <p className="mt-2 text-sm text-gray-500">

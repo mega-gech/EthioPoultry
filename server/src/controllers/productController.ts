@@ -220,14 +220,7 @@ export const updateProduct = async(
             return
         }
 
-        const product = await Product.findByIdAndUpdate(
-            id,
-            req.body,
-            {
-           new: true,
-           runValidators: true
-          }
-        )
+        const product = await Product.findById(id);
 
         if(!product){
             res.status(404).json({
@@ -236,6 +229,38 @@ export const updateProduct = async(
             })
             return
         }
+
+        if (product.sellerId.toString() !== userId) {
+           res.status(403).json({
+           success: false,
+           message: "You are not allowed to update this product",
+         });
+         return;
+         }
+        
+         const {
+            name,
+            description,
+            price,
+           quantity,
+           category,
+           image,
+           images,
+           location,
+           status,
+       } = req.body;
+
+    if (name !== undefined) product.name = name;
+    if (description !== undefined) product.description = description;
+    if (price !== undefined) product.price = price;
+    if (quantity !== undefined) product.quantity = quantity;
+    if (category !== undefined) product.category = category;
+    if (image !== undefined) product.image = image;
+    if (images !== undefined) product.images = images;
+    if (location !== undefined) product.location = location;
+    if (status !== undefined) product.status = status;
+
+    await product.save();
 
         res.status(200).json({
             success:true,
