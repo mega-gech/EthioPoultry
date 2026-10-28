@@ -64,6 +64,13 @@ interface SellerProfileResponse {
     message?: string;
 }
 
+export interface MarketplaceStatistics {
+  registeredFarmers: number;
+  availableProducts: number;
+  successfulConnections: number;
+  coveredLocations: number;
+}
+
 export async function getSellerProfile(
     sellerId:string):Promise<SellerProfileResponse["data"]>{
         const response = await fetch(`${API_URL}/sellers/${sellerId}`);
@@ -103,6 +110,22 @@ export async function getProducts():Promise<SellerProduct[]> {
             throw new Error(result.message || "Failed to fetch products");
         };
         return result.data;
+}
+
+export async function getStatistics(): Promise<MarketplaceStatistics> {
+  const response = await fetch(`${API_URL}/statistics`);
+
+  const result: {
+    success: boolean;
+    data: MarketplaceStatistics;
+    message?: string;
+  } = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Failed to fetch statistics");
+  }
+
+  return result.data;
 }
 
 export async function getMyProducts(): Promise<SellerProduct[]> {

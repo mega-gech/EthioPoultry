@@ -14,7 +14,11 @@ import {
 } from "lucide-react";
 
 import { useEffect, useState } from "react";
-import { getProducts, type SellerProduct } from "../services/sellerService";
+import { getProducts,
+   getStatistics,
+   type SellerProduct, 
+    type MarketplaceStatistics, } from "../services/sellerService";
+
 
 import eggBasket from "../assets/06_egg_basket.jpg";
 import farmBrochure from "../assets/07_farm_brochure.jpg";
@@ -23,25 +27,25 @@ import veterinaryKit from "../assets/08_veterinary_kit.jpg";
 const statistics = [
   {
     icon: Users,
-    number: "12,450+",
+    key: "registeredFarmers",
     label: "Registered Farmers",
   },
   {
     icon: Package,
-    number: "8,750+",
+    key: "availableProducts",
     label: "Available Products",
   },
   {
     icon: HeartHandshake,
-    number: "25,300+",
-    label: "Successful Connections",
+    key: "successfulConnections",
+    label: "Completed Orders",
   },
   {
     icon: MapPinned,
-    number: "120+",
+    key: "coveredLocations",
     label: "Covered Locations",
   },
-];
+] as const;
 
 const promotions = [
   {
@@ -88,7 +92,10 @@ function FeaturedProducts() {
   const [products, setProducts] = useState<SellerProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [statisticsData, setStatisticsData] =  useState<MarketplaceStatistics | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+ 
 
   useEffect(() => {
   async function fetchProducts() {
@@ -110,6 +117,19 @@ function FeaturedProducts() {
   }
 
   fetchProducts();
+}, []);
+
+useEffect(() => {
+  getStatistics()
+    .then((data) => {
+      setStatisticsData(data);
+    })
+    .catch((error) => {
+      console.error("Failed to load statistics:", error);
+    })
+    .finally(() => {
+      setStatsLoading(false);
+    });
 }, []);
 
 const categories = [
@@ -172,7 +192,15 @@ const displayedProducts = [...products]
 
         {/* PRODUCTS + PROMOTIONS */}
 
-        {loading ? (
+       
+  
+
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px] xl:gap-8">
+          {/* LEFT COLUMN */}
+          <div className="min-w-0">
+            {/* SMALLER PRODUCT CARDS */}
+
+             {loading ? (
       <div className="col-span-full flex min-h-[240px] flex-col items-center justify-center gap-3">
       <LoaderCircle
       size={36}
@@ -193,12 +221,6 @@ const displayedProducts = [...products]
          No products found in this category.
         </p>
          ) : (
-  
-
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px] xl:gap-8">
-          {/* LEFT COLUMN */}
-          <div className="min-w-0">
-            {/* SMALLER PRODUCT CARDS */}
             
             <div className="grid grid-cols-2 gap-3 sm:gap-3 xl:grid-cols-4">
               {displayedProducts.map((product) => (
@@ -254,6 +276,7 @@ const displayedProducts = [...products]
                 </article>
               ))}
             </div>
+         )}
 
             {/* MARKETPLACE STATISTICS */}
             <div className="mt-6 overflow-hidden rounded-xl border border-green-100 bg-white shadow-sm sm:mt-8">
@@ -277,7 +300,11 @@ const displayedProducts = [...products]
 
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-gray-900 sm:text-base">
-                          {stat.number}
+                          {statsLoading
+                            ? "..."
+                           : statisticsData
+                           ? statisticsData[stat.key].toLocaleString()
+                           : "—"}
                         </p>
 
                         <p className="text-[10px] leading-4 text-gray-500 sm:text-xs">
@@ -374,7 +401,7 @@ const displayedProducts = [...products]
               );
             })}
           </div>
-        </div>)}
+        </div>
       </div>
     </section>
   );

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import User from "../models/User.js";
 import Product from "../models/Product.js";
+import Order from "../models/Order.js";
 
 export const getStatistics = async (
   req: Request,
@@ -11,6 +12,7 @@ export const getStatistics = async (
       registeredFarmers,
       availableProducts,
       locations,
+      successfulConnections,
     ] = await Promise.all([
       User.countDocuments({ role: "seller" }),
 
@@ -20,6 +22,8 @@ export const getStatistics = async (
         status: "Active",
         location: { $nin: ["", null] },
       }),
+
+      Order.countDocuments({ status: "Completed" }),
     ]);
 
     res.status(200).json({
@@ -27,7 +31,7 @@ export const getStatistics = async (
       data: {
         registeredFarmers,
         availableProducts,
-        successfulConnections: null,
+        successfulConnections,
         coveredLocations: locations.length,
       },
     });
