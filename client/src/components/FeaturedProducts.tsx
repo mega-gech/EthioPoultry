@@ -1,4 +1,5 @@
 
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MapPin,
@@ -8,21 +9,21 @@ import {
   MapPinned,
   ArrowRight,
   Phone,
-  BookOpen,
-  Stethoscope,
   LoaderCircle,
 } from "lucide-react";
 
-import { useEffect, useState } from "react";
-import { getProducts,
-   getStatistics,
-   type SellerProduct, 
-    type MarketplaceStatistics, } from "../services/sellerService";
-
+import {
+  getProducts,
+  getStatistics,
+  type SellerProduct,
+  type MarketplaceStatistics,
+} from "../services/sellerService";
 
 import eggBasket from "../assets/06_egg_basket.jpg";
 import farmBrochure from "../assets/07_farm_brochure.jpg";
 import veterinaryKit from "../assets/08_veterinary_kit.jpg";
+
+const categoryOrder = ["Eggs", "Chickens", "Equipment", "Feed"];
 
 const statistics = [
   {
@@ -33,55 +34,49 @@ const statistics = [
   {
     icon: Package,
     key: "availableProducts",
-    label: "Available Products",
+    label: "Active Listings",
   },
   {
     icon: HeartHandshake,
     key: "successfulConnections",
-    label: "Completed Orders",
+    label: "Successful Deals",
   },
   {
     icon: MapPinned,
     key: "coveredLocations",
-    label: "Covered Locations",
+    label: "Cities Covered",
   },
 ] as const;
 
 const promotions = [
   {
     id: "sell",
-    eyebrow: "For Farmers & Sellers",
-    title: "Want to Sell Your Products?",
-    description: "Reach more customers across Ethiopia.",
-    button: "Start Selling",
+    title: "Post Your Ad",
+    description: "Reach thousands of buyers and grow your business.",
+    button: "Post an Ad",
     image: eggBasket,
     imageAlt: "Basket of fresh eggs",
     theme: "green",
-    icon: Package,
     action: "/seller/products/add",
   },
   {
     id: "learn",
-    eyebrow: "Learn",
     title: "Poultry Farming Guide",
-    description: "Learn about poultry farming and care.",
+    description: "Step-by-step guide to start and manage your poultry farm.",
     button: "Read Guide",
     image: farmBrochure,
     imageAlt: "Poultry farming guide",
     theme: "amber",
-    icon: BookOpen,
     action: "/#learn",
   },
   {
     id: "health",
-    eyebrow: "Health",
-    title: "Poultry Health",
-    description: "Learn about common diseases and care.",
-    button: "Health Guide",
+    title: "Health & Diseases",
+    description: "Learn about common diseases and how to prevent them.",
+    button: "Learn More",
     image: veterinaryKit,
     imageAlt: "Poultry veterinary supplies",
     theme: "blue",
-    icon: Stethoscope,
     action: "/#health",
   },
 ] as const;
@@ -92,312 +87,274 @@ function FeaturedProducts() {
   const [products, setProducts] = useState<SellerProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [statisticsData, setStatisticsData] =  useState<MarketplaceStatistics | null>(null);
+
+  const [statisticsData, setStatisticsData] =
+    useState<MarketplaceStatistics | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
- 
 
   useEffect(() => {
-  async function fetchProducts() {
-    try {
-      setLoading(true);
-      setError("");
+    async function fetchProducts() {
+      try {
+        setLoading(true);
+        setError("");
 
-      const data = await getProducts();
-      setProducts(data);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load products"
-      );
-    } finally {
-      setLoading(false);
+        const data = await getProducts();
+        setProducts(data);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to load products"
+        );
+      } finally {
+        setLoading(false);
+      }
     }
-  }
 
-  fetchProducts();
-}, []);
+    fetchProducts();
+  }, []);
 
-useEffect(() => {
-  getStatistics()
-    .then((data) => {
-      setStatisticsData(data);
-    })
-    .catch((error) => {
-      console.error("Failed to load statistics:", error);
-    })
-    .finally(() => {
-      setStatsLoading(false);
-    });
-}, []);
+  useEffect(() => {
+    getStatistics()
+      .then((data) => {
+        setStatisticsData(data);
+      })
+      .catch((err) => {
+        console.error("Failed to load statistics:", err);
+      })
+      .finally(() => {
+        setStatsLoading(false);
+      });
+  }, []);
 
-const categories = [
-  "All",
-  "Eggs",
-  "Chickens",
-  "Equipment",
-  "Feed",
-];
+  // Select the newest product from each category.
+  const displayedProducts = categoryOrder
+    .map((category) =>
+      products
+        .filter((product) => product.category === category)
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt ?? 0).getTime() -
+            new Date(a.createdAt ?? 0).getTime()
+        )[0]
+    )
+    .filter((product): product is SellerProduct => Boolean(product))
+    .slice(0, 4);
 
-const displayedProducts = [...products]
-  .sort(
-    (a, b) =>
-      new Date(b.createdAt ?? 0).getTime() -
-      new Date(a.createdAt ?? 0).getTime()
-  )
-  .filter(
-    (product) =>
-      selectedCategory === "All" ||
-      product.category === selectedCategory
-  )
-  .slice(0, 4);
-
-
+  const themeStyles = {
+    green: {
+      card: "bg-[#eef5eb]",
+      button: "bg-green-800 text-white hover:bg-green-900",
+    },
+    amber: {
+      card: "bg-[#fff8e8]",
+      button:
+        "border border-amber-300 bg-white text-amber-900 hover:bg-amber-50",
+    },
+    blue: {
+      card: "bg-[#edf4fc]",
+      button:
+        "border border-blue-200 bg-white text-blue-900 hover:bg-blue-50",
+    },
+  };
 
   return (
     <section
       aria-labelledby="featured-products-heading"
-      className="bg-gray-50 py-8 sm:py-10 lg:py-12"
+      className="bg-white py-6 sm:py-8"
     >
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* SECTION HEADER */}
-        <div className="mb-5 flex items-end justify-between gap-3 sm:mb-6">
-          <div>
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-green-700">
-              Discover Enqulalie
-            </p>
-
-            <h2
-              id="featured-products-heading"
-              className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl"
-            >
-              Featured Products
-            </h2>
-
-            <p className="mt-1 text-sm text-gray-500">
-              Quality poultry products from local sellers.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => navigate("/products")}
-            className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-2 text-sm font-semibold text-green-700 transition hover:bg-green-50 hover:text-green-800"
-          >
-            View All
-            <ArrowRight size={16} />
-          </button>
-        </div>
-
-        {/* PRODUCTS + PROMOTIONS */}
-
-       
-  
-
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px] xl:gap-8">
+      <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
+        {/* PRODUCTS AND PROMOTIONS */}
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_290px] xl:gap-6">
           {/* LEFT COLUMN */}
           <div className="min-w-0">
-            {/* SMALLER PRODUCT CARDS */}
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2
+                id="featured-products-heading"
+                className="text-base font-bold text-gray-900 sm:text-lg"
+              >
+                Featured Listings
+              </h2>
 
-             {loading ? (
-      <div className="col-span-full flex min-h-[240px] flex-col items-center justify-center gap-3">
-      <LoaderCircle
-      size={36}
-      className="animate-spin text-green-700"
-      aria-label="Loading products"
-     />
+              <button
+                type="button"
+                onClick={() => navigate("/products")}
+                className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-green-800 hover:text-green-950 sm:text-sm"
+              >
+                View all listings
+                <ArrowRight size={14} />
+              </button>
+            </div>
 
-      <p className="text-sm font-medium text-gray-500">
-      Loading products...
-      </p>
-       </div>
-       ) : error ? (
-       <p className="col-span-full py-8 text-center text-sm text-red-600">
-       {error}
-       </p>
-       ) : displayedProducts.length === 0 ? ( 
-         <p className="col-span-full py-8 text-center text-sm text-gray-500">
-         No products found in this category.
-        </p>
-         ) : (
-            
-            <div className="grid grid-cols-2 gap-3 sm:gap-3 xl:grid-cols-4">
-              {displayedProducts.map((product) => (
-                <article
-                  key={product._id}
-                  className="group min-w-0 overflow-hidden rounded-lg border border-gray-200 bg-white transition duration-200 hover:-translate-y-1 hover:border-green-200 hover:shadow-md"
-                >
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/products/${product._id}`)}
-                    aria-label={`View ${product.name}`}
-                    className="block w-full overflow-hidden bg-gray-100 text-left"
+            {/* PRODUCT LOADING, ERROR, AND EMPTY STATES */}
+            {loading ? (
+              <div className="flex min-h-[180px] flex-col items-center justify-center gap-2">
+                <LoaderCircle
+                  size={30}
+                  className="animate-spin text-green-700"
+                  aria-label="Loading products"
+                />
+                <p className="text-sm text-gray-500">Loading products...</p>
+              </div>
+            ) : error ? (
+              <p className="py-8 text-center text-sm text-red-600">
+                {error}
+              </p>
+            ) : displayedProducts.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-gray-300 py-10 text-center text-sm text-gray-500">
+                No products available yet.
+              </p>
+            ) : (
+              /* FOUR CARDS ON DESKTOP, TWO ON SMALL SCREENS */
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {displayedProducts.map((product) => (
+                  <article
+                    key={product._id}
+                    className="group min-w-0 overflow-hidden rounded-md border border-gray-200 bg-white transition hover:border-green-200 hover:shadow-md"
                   >
-                    <div className="aspect-[5/3] overflow-hidden">
-                      <img
-                        src={product.image || product.images?.[0] || ""}
-                        alt={product.name}
-                        loading="lazy"
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                      />
-                    </div>
-                  </button>
-
-                  <div className="p-2 sm:p-3">
-                    <h3
-                      title={product.name}
-                      className="truncate text-xs font-semibold text-gray-900 sm:text-sm"
-                    >
-                      {product.name}
-                    </h3>
-
-                    <p className="mt-1.5 flex items-center gap-1 text-[10px] text-gray-500 sm:text-xs">
-                      <MapPin
-                        size={12}
-                        className="shrink-0 text-green-600"
-                      />
-                      <span className="truncate">{product.location}</span>
-                    </p>
-
-                    <p className="mt-2 text-sm font-bold text-green-700 sm:text-base">
-                      {product.price.toLocaleString()} ETB
-                    </p>
-
                     <button
                       type="button"
                       onClick={() => navigate(`/products/${product._id}`)}
-                      className="mt-2 flex min-h-9 w-full items-center justify-center gap-1 rounded-md bg-green-700 px-1.5 py-1.5 text-[10px] font-semibold text-white transition hover:bg-green-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 sm:text-xs"
+                      aria-label={`View ${product.name}`}
+                      className="block w-full overflow-hidden bg-gray-100 text-left"
                     >
-                      <Phone size={13} />
-                      View Details
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-         )}
-
-            {/* MARKETPLACE STATISTICS */}
-            <div className="mt-6 overflow-hidden rounded-xl border border-green-100 bg-white shadow-sm sm:mt-8">
-              <div className="grid grid-cols-2 sm:grid-cols-4">
-                {statistics.map((stat, index) => {
-                  const Icon = stat.icon;
-
-                  return (
-                    <div
-                      key={stat.label}
-                      className={[
-                        "flex items-center justify-center gap-2 px-2 py-4 sm:px-3 sm:py-5",
-                        index < 2 ? "border-b border-gray-100" : "",
-                        index % 2 === 0 ? "border-r border-gray-100" : "",
-                        "sm:border-b-0 sm:border-r sm:last:border-r-0",
-                      ].join(" ")}
-                    >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-50 text-green-700 sm:h-10 sm:w-10">
-                        <Icon size={20} strokeWidth={1.8} />
+                      <div className="aspect-[5/3] overflow-hidden">
+                        <img
+                          src={product.image || product.images?.[0] || ""}
+                          alt={product.name}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        />
                       </div>
+                    </button>
 
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-gray-900 sm:text-base">
-                          {statsLoading
-                            ? "..."
-                           : statisticsData
-                           ? statisticsData[stat.key].toLocaleString()
-                           : "—"}
-                        </p>
+                    <div className="p-2 sm:p-2.5">
+                      <h3
+                        title={product.name}
+                        className="truncate text-xs font-semibold text-gray-900 sm:text-sm"
+                      >
+                        {product.name}
+                      </h3>
 
-                        <p className="text-[10px] leading-4 text-gray-500 sm:text-xs">
-                          {stat.label}
-                        </p>
+                      <p className="mt-1 flex items-center gap-1 text-[10px] text-gray-500 sm:text-[11px]">
+                        <MapPin
+                          size={11}
+                          className="shrink-0 text-gray-500"
+                        />
+                        <span className="truncate">
+                          {product.location || "Ethiopia"}
+                        </span>
+                      </p>
+
+                      <p className="mt-2 text-xs font-bold text-green-800 sm:text-sm">
+                        {product.price.toLocaleString()} ETB
+                      </p>
+
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(`/products/${product._id}`)
+                          }
+                          aria-label={`View ${product.name} contact details`}
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-green-200 text-green-800 transition hover:bg-green-50"
+                        >
+                          <Phone size={13} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(`/products/${product._id}`)
+                          }
+                          className="min-w-0 flex-1 rounded border border-green-200 px-1 py-1.5 text-[9px] font-semibold text-green-800 transition hover:bg-green-50 sm:text-[10px]"
+                        >
+                          View Details
+                        </button>
                       </div>
                     </div>
-                  );
-                })}
+                  </article>
+                ))}
               </div>
-            </div>
+            )}
           </div>
 
-          {/* RIGHT COLUMN: PROMOTIONAL CARDS */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
+          {/* RIGHT COLUMN: PROMOTIONAL BANNERS */}
+          <aside className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-1">
             {promotions.map((promotion) => {
-              const Icon = promotion.icon;
-
-              const themeStyles = {
-                green: {
-                  card: "bg-green-50",
-                  eyebrow: "text-green-800",
-                  icon: "bg-green-100 text-green-800",
-                  button:
-                    "bg-green-700 text-white hover:bg-green-800 focus-visible:ring-green-600",
-                },
-                amber: {
-                  card: "bg-amber-50",
-                  eyebrow: "text-amber-800",
-                  icon: "bg-amber-100 text-amber-800",
-                  button:
-                    "border border-amber-200 bg-white text-amber-900 hover:bg-amber-100 focus-visible:ring-amber-500",
-                },
-                blue: {
-                  card: "bg-blue-50",
-                  eyebrow: "text-blue-800",
-                  icon: "bg-blue-100 text-blue-800",
-                  button:
-                    "border border-blue-200 bg-white text-blue-900 hover:bg-blue-100 focus-visible:ring-blue-500",
-                },
-              };
-
               const theme = themeStyles[promotion.theme];
 
               return (
                 <article
                   key={promotion.id}
-                  className={`relative flex min-h-[168px] overflow-hidden rounded-xl ${theme.card} sm:min-h-[180px] lg:min-h-[170px]`}
+                  className={`relative flex min-h-[100px] items-center overflow-hidden rounded-lg ${theme.card} sm:min-h-[100px] lg:min-h-[86px]`}
                 >
-                  <div className="relative z-10 flex w-[64%] flex-col items-start justify-center p-4">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`flex h-6 w-6 items-center justify-center rounded-md ${theme.icon}`}
-                      >
-                        <Icon size={14} />
-                      </span>
-
-                      <p
-                        className={`text-[9px] font-bold uppercase tracking-wide ${theme.eyebrow}`}
-                      >
-                        {promotion.eyebrow}
-                      </p>
-                    </div>
-
-                    <h3 className="mt-2 text-sm font-bold leading-snug text-gray-900 sm:text-base">
+                  <div className="relative z-10 flex w-[68%] flex-col items-start p-3 sm:p-3.5 lg:w-[70%]">
+                    <h3 className="text-xs font-bold leading-snug text-gray-900 sm:text-sm">
                       {promotion.title}
                     </h3>
 
-                    <p className="mt-1.5 text-xs leading-5 text-gray-600">
+                    <p className="mt-1 max-w-[210px] text-[10px] leading-[1.4] text-gray-600 sm:text-[11px]">
                       {promotion.description}
                     </p>
 
                     <button
                       type="button"
                       onClick={() => navigate(promotion.action)}
-                      className={`mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${theme.button}`}
+                      className={`mt-2 rounded-md px-2.5 py-1 text-[10px] font-semibold transition sm:text-[11px] ${theme.button}`}
                     >
                       {promotion.button}
-                      <ArrowRight size={14} />
                     </button>
                   </div>
 
-                  <div className="absolute inset-y-0 right-0 w-[40%]">
+                  <div className="absolute inset-y-0 right-0 w-[34%]">
                     <img
                       src={promotion.image}
                       alt={promotion.imageAlt}
                       loading="lazy"
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-contain p-1"
                     />
-
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/5" />
                   </div>
                 </article>
+              );
+            })}
+          </aside>
+        </div>
+
+        {/* MARKETPLACE STATISTICS */}
+        <div className="mt-5 overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm sm:mt-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4">
+            {statistics.map((stat, index) => {
+              const Icon = stat.icon;
+
+              return (
+                <div
+                  key={stat.key}
+                  className={[
+                    "flex items-center justify-center gap-2.5 px-2 py-3 sm:py-4",
+                    index % 2 === 0 ? "border-r border-gray-100" : "",
+                    index < 2 ? "border-b border-gray-100" : "",
+                    "sm:border-b-0 sm:border-r sm:last:border-r-0",
+                  ].join(" ")}
+                >
+                  <Icon
+                    size={27}
+                    strokeWidth={1.7}
+                    className="shrink-0 text-green-800 sm:h-8 sm:w-8"
+                  />
+
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold leading-tight text-green-800 sm:text-base">
+                      {statsLoading
+                        ? "..."
+                        : statisticsData
+                          ? statisticsData[stat.key].toLocaleString()
+                          : "—"}
+                    </p>
+
+                    <p className="mt-0.5 text-[9px] leading-tight text-gray-600 sm:text-[11px]">
+                      {stat.label}
+                    </p>
+                  </div>
+                </div>
               );
             })}
           </div>
