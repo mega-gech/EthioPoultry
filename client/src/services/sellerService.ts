@@ -52,6 +52,7 @@ export interface SellerProduct {
   rating: number;
   reviews: number;
   status: "Active" | "Out of Stock";
+  createdAt?: string;
 }
 
 interface SellerProfileResponse {

@@ -10,47 +10,15 @@ import {
   Phone,
   BookOpen,
   Stethoscope,
+  LoaderCircle,
 } from "lucide-react";
 
-import eggTray from "../assets/02_egg_tray.jpg";
-import brownHen from "../assets/03_brown_hen.jpg";
-import whiteHens from "../assets/04_white_hens.jpg";
-import stackedEggTrays from "../assets/05_stacked_egg_trays.jpg";
+import { useEffect, useState } from "react";
+import { getProducts, type SellerProduct } from "../services/sellerService";
 
 import eggBasket from "../assets/06_egg_basket.jpg";
 import farmBrochure from "../assets/07_farm_brochure.jpg";
 import veterinaryKit from "../assets/08_veterinary_kit.jpg";
-
-const products = [
-  {
-    id: 1,
-    image: eggTray,
-    name: "Fresh Eggs (30 pcs)",
-    location: "Addis Ababa",
-    price: "240 ETB",
-  },
-  {
-    id: 2,
-    image: brownHen,
-    name: "Brown Layer Chicken",
-    location: "Addis Ababa",
-    price: "850 ETB",
-  },
-  {
-    id: 3,
-    image: whiteHens,
-    name: "White Layer Chicken",
-    location: "Addis Ababa",
-    price: "900 ETB",
-  },
-  {
-    id: 4,
-    image: stackedEggTrays,
-    name: "Eggs (60 pcs)",
-    location: "Addis Ababa",
-    price: "480 ETB",
-  },
-];
 
 const statistics = [
   {
@@ -117,6 +85,56 @@ const promotions = [
 function FeaturedProducts() {
   const navigate = useNavigate();
 
+  const [products, setProducts] = useState<SellerProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+   const [selectedCategory, setSelectedCategory] = useState("All");
+
+  useEffect(() => {
+  async function fetchProducts() {
+    try {
+      setLoading(true);
+      setError("");
+
+      const data = await getProducts();
+      setProducts(data);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load products"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  fetchProducts();
+}, []);
+
+const categories = [
+  "All",
+  "Eggs",
+  "Chickens",
+  "Equipment",
+  "Feed",
+];
+
+const displayedProducts = [...products]
+  .sort(
+    (a, b) =>
+      new Date(b.createdAt ?? 0).getTime() -
+      new Date(a.createdAt ?? 0).getTime()
+  )
+  .filter(
+    (product) =>
+      selectedCategory === "All" ||
+      product.category === selectedCategory
+  )
+  .slice(0, 4);
+
+
+
   return (
     <section
       aria-labelledby="featured-products-heading"
@@ -153,25 +171,50 @@ function FeaturedProducts() {
         </div>
 
         {/* PRODUCTS + PROMOTIONS */}
+
+        {loading ? (
+      <div className="col-span-full flex min-h-[240px] flex-col items-center justify-center gap-3">
+      <LoaderCircle
+      size={36}
+      className="animate-spin text-green-700"
+      aria-label="Loading products"
+     />
+
+      <p className="text-sm font-medium text-gray-500">
+      Loading products...
+      </p>
+       </div>
+       ) : error ? (
+       <p className="col-span-full py-8 text-center text-sm text-red-600">
+       {error}
+       </p>
+       ) : displayedProducts.length === 0 ? ( 
+         <p className="col-span-full py-8 text-center text-sm text-gray-500">
+         No products found in this category.
+        </p>
+         ) : (
+  
+
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px] xl:gap-8">
           {/* LEFT COLUMN */}
           <div className="min-w-0">
             {/* SMALLER PRODUCT CARDS */}
+            
             <div className="grid grid-cols-2 gap-3 sm:gap-3 xl:grid-cols-4">
-              {products.map((product) => (
+              {displayedProducts.map((product) => (
                 <article
-                  key={product.id}
+                  key={product._id}
                   className="group min-w-0 overflow-hidden rounded-lg border border-gray-200 bg-white transition duration-200 hover:-translate-y-1 hover:border-green-200 hover:shadow-md"
                 >
                   <button
                     type="button"
-                    onClick={() => navigate(`/products/${product.id}`)}
+                    onClick={() => navigate(`/products/${product._id}`)}
                     aria-label={`View ${product.name}`}
                     className="block w-full overflow-hidden bg-gray-100 text-left"
                   >
                     <div className="aspect-[5/3] overflow-hidden">
                       <img
-                        src={product.image}
+                        src={product.image || product.images?.[0] || ""}
                         alt={product.name}
                         loading="lazy"
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
@@ -196,12 +239,12 @@ function FeaturedProducts() {
                     </p>
 
                     <p className="mt-2 text-sm font-bold text-green-700 sm:text-base">
-                      {product.price}
+                      {product.price.toLocaleString()} ETB
                     </p>
 
                     <button
                       type="button"
-                      onClick={() => navigate(`/products/${product.id}`)}
+                      onClick={() => navigate(`/products/${product._id}`)}
                       className="mt-2 flex min-h-9 w-full items-center justify-center gap-1 rounded-md bg-green-700 px-1.5 py-1.5 text-[10px] font-semibold text-white transition hover:bg-green-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 sm:text-xs"
                     >
                       <Phone size={13} />
@@ -331,7 +374,7 @@ function FeaturedProducts() {
               );
             })}
           </div>
-        </div>
+        </div>)}
       </div>
     </section>
   );
