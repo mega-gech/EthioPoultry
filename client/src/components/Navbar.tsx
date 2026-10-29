@@ -8,7 +8,7 @@ const navLinks = [
   { name: "Home", href: "/" },
   { name: "Products", href: "/products" },
   { name: "Health & Tips", href: "/health" },
-  { name: "Market Prices", href: "/#prices" },
+  { name: "Market Prices", href: "/market" },
   { name: "Contact", href: "/#contact" },
 ];
 
@@ -184,6 +184,13 @@ function Navbar() {
       return (
         location.pathname === "/health" ||
         location.pathname.startsWith("/health/")
+      );
+    }
+
+    if (href === "/market") {
+      return (
+        location.pathname === "/market" ||
+        location.pathname.startsWith("/market/")
       );
     }
 

@@ -16,6 +16,7 @@ import AddProduct from './pages/SellerDashboard/AddProduct';
 import EditProduct from './pages/SellerDashboard/EditProduct';
 import ProtectedRoute from './components/ProtectedRoute';
 import HealthTips from "./pages/HealthTips";
+import MarketPrice from "./pages/MarketPrice"
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/products" element = {<Products/>} />
         <Route path="/health" element = {<HealthTips/>} />
+        <Route path="/market" element = {<MarketPrice />} />
         <Route path="/products/:id" element={<ProductDetails />} />
         <Route path='/sellerProfile/:id' element={<SellerProfile />}/>
         <Route path="/login" element={<Login />} />
