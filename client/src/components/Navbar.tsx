@@ -7,9 +7,7 @@ import logo from "../assets/hen_logo.png";
 const navLinks = [
   { name: "Home", href: "/" },
   { name: "Products", href: "/products" },
-  { name: "About Us", href: "/#about" },
-  { name: "Learn", href: "/#learn" },
-  { name: "Health & Tips", href: "/#health" },
+  { name: "Health & Tips", href: "/health" },
   { name: "Market Prices", href: "/#prices" },
   { name: "Contact", href: "/#contact" },
 ];
@@ -179,6 +177,13 @@ function Navbar() {
       return (
         location.pathname === "/products" ||
         location.pathname.startsWith("/product/")
+      );
+    }
+
+    if (href === "/health") {
+      return (
+        location.pathname === "/health" ||
+        location.pathname.startsWith("/health/")
       );
     }
 

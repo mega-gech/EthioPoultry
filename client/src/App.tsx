@@ -15,12 +15,14 @@ import SellerProducts from './pages/SellerDashboard/SellerProducts';
 import AddProduct from './pages/SellerDashboard/AddProduct';
 import EditProduct from './pages/SellerDashboard/EditProduct';
 import ProtectedRoute from './components/ProtectedRoute';
+import HealthTips from "./pages/HealthTips";
 
 function App() {
   return (
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/products" element = {<Products/>} />
+        <Route path="/health" element = {<HealthTips/>} />
         <Route path="/products/:id" element={<ProductDetails />} />
         <Route path='/sellerProfile/:id' element={<SellerProfile />}/>
         <Route path="/login" element={<Login />} />
