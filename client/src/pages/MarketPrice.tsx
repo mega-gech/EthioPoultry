@@ -1,20 +1,28 @@
-
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Topbar from "../components/Topbar";
 import Navbar from "../components/Navbar";
+
+import heroImage from "../assets/01_hen_egg_basket.jpg";
+
 import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Package,
-  Tags,
+  ArrowUp,
+  ArrowDown,
+  Egg,
+  Bird,
+  Wheat,
+  Wrench,
   MapPin,
-  Search,
   CalendarDays,
   History,
-  X,
+  Package,
+  CircleDollarSign,
+  Info,
+  Lightbulb,
   BarChart3,
-  ArrowUpDown,
+  TriangleAlert,
 } from "lucide-react";
 
 import {
@@ -25,26 +33,291 @@ import {
 import type { MarketPriceRecord } from "../services/marketPriceService";
 import type { SellerProduct } from "../services/sellerService";
 
-const categories = ["All", "Eggs", "Chickens", "Equipment", "Feed"];
+// --------------------------------------------------
+// SETTINGS
+// --------------------------------------------------
 
-const money = (price: number) =>
-  `${price.toLocaleString("en-ET", {
-    maximumFractionDigits: 2,
-  })} ETB`;
+// While developing: if the backend is down or empty, show sample data
+// that matches the design. Set to false for production.
+const USE_SAMPLE_DATA_FALLBACK = true;
+
+const REQUEST_TIMEOUT_MS = 10000;
+
+// --------------------------------------------------
+// TYPES
+// --------------------------------------------------
+
+type Category = "Eggs" | "Chickens" | "Feed" | "Equipment";
+
+type PriceDirection = "up" | "down" | "stable" | "unknown";
+
+type Change = { amount: number; percentage: number } | null;
+
+const categories: {
+  name: Category;
+  label: string;
+  title: string;
+  unit: string;
+  icon: typeof Egg;
+}[] = [
+  {
+    name: "Eggs",
+    label: "Egg",
+    title: "Egg Prices",
+    unit: "Per piece / per tray",
+    icon: Egg,
+  },
+  {
+    name: "Chickens",
+    label: "Hens / Chickens",
+    title: "Hen Prices",
+    unit: "Per bird",
+    icon: Bird,
+  },
+  {
+    name: "Feed",
+    label: "Feed",
+    title: "Feed Prices",
+    unit: "Per kg / per sack",
+    icon: Wheat,
+  },
+  {
+    name: "Equipment",
+    label: "Equipment",
+    title: "Equipment Prices",
+    unit: "Per item",
+    icon: Wrench,
+  },
+];
+
+const iconStyles: Record<Category, string> = {
+  Eggs: "bg-amber-100 text-amber-600",
+  Chickens: "bg-orange-100 text-orange-600",
+  Feed: "bg-green-100 text-green-700",
+  Equipment: "bg-slate-100 text-slate-600",
+};
+
+// --------------------------------------------------
+// SAMPLE DATA (matches the design mockup)
+// --------------------------------------------------
+
+const SAMPLE_DATES = [
+  "2025-10-01T00:00:00.000Z",
+  "2025-10-08T00:00:00.000Z",
+  "2025-10-15T00:00:00.000Z",
+  "2025-10-29T00:00:00.000Z",
+];
+
+const sampleHistory = (
+  productName: string,
+  category: Category,
+  unit: string,
+  location: string,
+  prices: number[]
+) =>
+  prices.map((price, i) => ({
+    _id: `h-${productName}-${location}-${i}`,
+    productName,
+    category,
+    location,
+    unit,
+    price,
+    recordedAt: SAMPLE_DATES[i],
+    source: "Sample",
+  }));
+
+const sampleSeller = (
+  id: string,
+  name: string,
+  category: Category,
+  location: string,
+  quantity: string,
+  price: number
+) => ({
+  _id: id,
+  name,
+  description: "",
+  category,
+  location,
+  quantity,
+  price,
+  createdAt: SAMPLE_DATES[3],
+});
+
+// price = current listing, history = oldest -> newest
+const SAMPLE_EGG_LOCATIONS = [
+  { location: "Addis Ababa", price: 14, history: [13, 12, 16, 14] },
+  { location: "Dire Dawa", price: 15, history: [14, 13, 17, 15] },
+  { location: "Hawassa", price: 13, history: [12, 11, 15, 13] },
+  { location: "Bahir Dar", price: 14, history: [14, 12, 16, 14] },
+  { location: "Mekelle", price: 13, history: [14, 15, 11, 13] },
+];
+
+const SAMPLE_SELLERS = [
+  ...SAMPLE_EGG_LOCATIONS.map((item, i) =>
+    sampleSeller(
+      `s-egg-${i}`,
+      "Egg (per piece)",
+      "Eggs",
+      item.location,
+      "1 egg",
+      item.price
+    )
+  ),
+  sampleSeller("s-tray", "Egg Tray", "Eggs", "Addis Ababa", "30 pcs", 390),
+  sampleSeller("s-quail", "Quail Egg", "Eggs", "Addis Ababa", "1 egg", 20),
+  sampleSeller("s-hen", "Layer Hen", "Chickens", "Addis Ababa", "1 bird", 850),
+  sampleSeller("s-feed", "Layer Feed", "Feed", "Addis Ababa", "50 kg", 2400),
+  sampleSeller(
+    "s-equip",
+    "Egg Incubator",
+    "Equipment",
+    "Addis Ababa",
+    "1 unit",
+    6500
+  ),
+] as unknown as SellerProduct[];
+
+const SAMPLE_HISTORY = [
+  ...SAMPLE_EGG_LOCATIONS.flatMap((item) =>
+    sampleHistory(
+      "Egg (per piece)",
+      "Eggs",
+      "1 egg",
+      item.location,
+      item.history
+    )
+  ),
+  ...sampleHistory("Egg Tray", "Eggs", "30 pcs", "Addis Ababa", [
+    380, 360, 450, 390,
+  ]),
+  ...sampleHistory("Quail Egg", "Eggs", "1 egg", "Addis Ababa", [
+    20, 18, 25, 20,
+  ]),
+] as unknown as MarketPriceRecord[];
+
+// --------------------------------------------------
+// HELPERS
+// --------------------------------------------------
+
+const num = (value: number) =>
+  value.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
 const dateLabel = (date: string) => {
   const parsed = new Date(date);
 
   return Number.isNaN(parsed.getTime())
     ? "Date unavailable"
-    : parsed.toLocaleDateString("en-ET", {
-        day: "numeric",
+    : parsed.toLocaleDateString("en-US", {
         month: "short",
+        day: "numeric",
         year: "numeric",
       });
 };
 
-type PriceDirection = "up" | "down" | "stable" | "unknown";
+const withTimeout = <T,>(promise: Promise<T>, ms = REQUEST_TIMEOUT_MS) =>
+  Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () =>
+          reject(
+            new Error("The server did not respond. Is the backend running?")
+          ),
+        ms
+      )
+    ),
+  ]);
+
+const sameText = (a?: string, b?: string) =>
+  (a ?? "").trim().toLowerCase() === (b ?? "").trim().toLowerCase();
+
+// Min / max for one product (and location). Only if all records share a unit.
+const getHistoricalRange = (
+  history: MarketPriceRecord[],
+  productName: string,
+  location?: string
+) => {
+  const records = history.filter(
+    (record) =>
+      sameText(record.productName, productName) &&
+      (!location || sameText(record.location, location))
+  );
+
+  const units = new Set(records.map((record) => record.unit));
+
+  if (records.length === 0 || units.size !== 1) return null;
+
+  const prices = records.map((record) => record.price);
+
+  return { min: Math.min(...prices), max: Math.max(...prices) };
+};
+
+// First -> last recorded price for one product (and location).
+const getHistoricalChange = (
+  history: MarketPriceRecord[],
+  productName: string,
+  location?: string
+): Change => {
+  const records = history
+    .filter(
+      (record) =>
+        sameText(record.productName, productName) &&
+        (!location || sameText(record.location, location))
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime()
+    );
+
+  const units = new Set(records.map((record) => record.unit));
+
+  if (records.length < 2 || units.size !== 1) return null;
+
+  const first = records[0].price;
+  const last = records[records.length - 1].price;
+
+  if (first === 0) return null;
+
+  return {
+    amount: last - first,
+    percentage: ((last - first) / first) * 100,
+  };
+};
+
+// Change cell: arrow + amount + percentage (matches the design)
+function ChangeCell({ change }: { change: Change }) {
+  if (!change) return <span className="text-gray-400">—</span>;
+
+  const pct = change.percentage.toFixed(1);
+
+  if (change.amount > 0) {
+    return (
+      <span className="inline-flex items-center gap-1 font-semibold text-green-700">
+        <ArrowUp size={13} />+{num(change.amount)} ({pct}%)
+      </span>
+    );
+  }
+
+  if (change.amount < 0) {
+    return (
+      <span className="inline-flex items-center gap-1 font-semibold text-red-600">
+        <ArrowDown size={13} />
+        {num(change.amount)} ({pct}%)
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 text-gray-500">
+      <Minus size={13} />0 (0%)
+    </span>
+  );
+}
+
+// --------------------------------------------------
+// MAIN COMPONENT
+// --------------------------------------------------
 
 export default function MarketPrice() {
   const [sellerPrices, setSellerPrices] = useState<SellerProduct[]>([]);
@@ -53,12 +326,21 @@ export default function MarketPrice() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [historyError, setHistoryError] = useState("");
+  const [sampleNotice, setSampleNotice] = useState("");
 
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] =
+    useState<Category>("Eggs");
+
   const [selectedLocation, setSelectedLocation] = useState("All");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("newest");
+  const [draftLocation, setDraftLocation] = useState("All");
+
   const [trendProduct, setTrendProduct] = useState("");
+
+  const locationInitialised = useRef(false);
+
+  // --------------------------------------------------
+  // LOAD BACKEND DATA
+  // --------------------------------------------------
 
   useEffect(() => {
     let cancelled = false;
@@ -67,13 +349,33 @@ export default function MarketPrice() {
       setLoading(true);
       setError("");
       setHistoryError("");
+      setSampleNotice("");
 
       const [sellerResult, historyResult] = await Promise.allSettled([
-        getSellerPrices(),
-        getMarketPriceHistory(),
+        withTimeout(getSellerPrices()),
+        withTimeout(getMarketPriceHistory()),
       ]);
 
       if (cancelled) return;
+
+      const sellerOk =
+        sellerResult.status === "fulfilled" && sellerResult.value.length > 0;
+
+      // Backend failed or is empty -> use sample data (development only)
+      if (!sellerOk && USE_SAMPLE_DATA_FALLBACK) {
+        const reason =
+          sellerResult.status === "rejected"
+            ? sellerResult.reason instanceof Error
+              ? sellerResult.reason.message
+              : "Could not load seller prices."
+            : "The server returned no listings.";
+
+        setSellerPrices(SAMPLE_SELLERS);
+        setMarketHistory(SAMPLE_HISTORY);
+        setSampleNotice(reason);
+        setLoading(false);
+        return;
+      }
 
       if (sellerResult.status === "fulfilled") {
         setSellerPrices(sellerResult.value);
@@ -105,124 +407,176 @@ export default function MarketPrice() {
     };
   }, []);
 
-  const locations = useMemo(
-    () => [
+  // --------------------------------------------------
+  // LOCATIONS
+  // --------------------------------------------------
+
+  const locations = useMemo(() => {
+    const allLocations = [
+      ...sellerPrices.map((p) => p.location),
+      ...marketHistory.map((p) => p.location),
+    ];
+
+    return [
       "All",
       ...Array.from(
         new Set(
-          [
-            ...sellerPrices.map((p) => p.location),
-            ...marketHistory.map((p) => p.location),
-          ]
-            .filter((location): location is string => Boolean(location?.trim()))
+          allLocations
+            .filter((location): location is string =>
+              Boolean(location?.trim())
+            )
             .map((location) => location.trim())
         )
       ).sort((a, b) => a.localeCompare(b)),
-    ],
-    [sellerPrices, marketHistory]
-  );
+    ];
+  }, [sellerPrices, marketHistory]);
 
-  const matchesSearch = (
-    values: Array<string | number | undefined>
-  ) => {
-    const query = searchTerm.trim().toLowerCase();
+  // Default to Addis Ababa once data is loaded (as in the design)
+  useEffect(() => {
+    if (loading || locationInitialised.current) return;
 
-    return (
-      !query ||
-      values.some((value) =>
-        String(value ?? "").toLowerCase().includes(query)
-      )
-    );
-  };
+    locationInitialised.current = true;
+
+    if (locations.includes("Addis Ababa")) {
+      setSelectedLocation("Addis Ababa");
+      setDraftLocation("Addis Ababa");
+    }
+  }, [loading, locations]);
+
+  // --------------------------------------------------
+  // FILTER SELLER PRODUCTS
+  // --------------------------------------------------
 
   const filteredProducts = useMemo(() => {
-    const filtered = sellerPrices.filter((product) => {
-      const categoryMatch =
-        selectedCategory === "All" ||
-        product.category === selectedCategory;
-
-      const locationMatch =
-        selectedLocation === "All" ||
-        product.location?.toLowerCase() === selectedLocation.toLowerCase();
-
-      return (
-        categoryMatch &&
-        locationMatch &&
-        matchesSearch([
-          product.name,
-          product.description,
-          product.category,
-          product.location,
-          product.quantity,
-        ])
+    return sellerPrices
+      .filter(
+        (product) =>
+          product.category === selectedCategory &&
+          (selectedLocation === "All" ||
+            sameText(product.location, selectedLocation))
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt ?? 0).getTime() -
+          new Date(a.createdAt ?? 0).getTime()
       );
-    });
+  }, [sellerPrices, selectedCategory, selectedLocation]);
 
-    return [...filtered].sort((a, b) => {
-      if (sortBy === "price-low") return a.price - b.price;
-      if (sortBy === "price-high") return b.price - a.price;
-      if (sortBy === "name") return a.name.localeCompare(b.name);
+  // --------------------------------------------------
+  // FILTER HISTORICAL RECORDS
+  // --------------------------------------------------
 
-      return (
-        new Date(b.createdAt ?? 0).getTime() -
-        new Date(a.createdAt ?? 0).getTime()
-      );
-    });
-  }, [
-    sellerPrices,
-    selectedCategory,
-    selectedLocation,
-    searchTerm,
-    sortBy,
-  ]);
-
-  const filteredHistory = useMemo(
-    () =>
-      marketHistory.filter((record) => {
-        const categoryMatch =
-          selectedCategory === "All" ||
-          record.category === selectedCategory;
-
-        const locationMatch =
-          selectedLocation === "All" ||
-          record.location?.toLowerCase() === selectedLocation.toLowerCase();
-
-        return (
-          categoryMatch &&
-          locationMatch &&
-          matchesSearch([
-            record.productName,
-            record.category,
-            record.location,
-            record.unit,
-            record.source,
-          ])
-        );
-      }),
-    [marketHistory, selectedCategory, selectedLocation, searchTerm]
-  );
-
-  // Average of listed prices in each category.
-  // This is not a standardized market price because product units can differ.
-  const categoryAverage = (category: string) => {
-    const products = sellerPrices.filter(
-      (product) => product.category === category
+  const filteredHistory = useMemo(() => {
+    return marketHistory.filter(
+      (record) =>
+        record.category === selectedCategory &&
+        (selectedLocation === "All" ||
+          sameText(record.location, selectedLocation))
     );
+  }, [marketHistory, selectedCategory, selectedLocation]);
 
-    if (products.length === 0) return null;
+  // --------------------------------------------------
+  // LOCATION COMPARISON
+  // Compares ONE reference product (the most listed one)
+  // across locations, e.g. "Egg (per piece)".
+  // --------------------------------------------------
+
+  const referenceProduct = useMemo(() => {
+    const counts = new Map<string, { name: string; count: number }>();
+
+    sellerPrices
+      .filter((product) => product.category === selectedCategory)
+      .forEach((product) => {
+        const key = product.name.toLowerCase();
+        const current = counts.get(key) ?? { name: product.name, count: 0 };
+
+        current.count += 1;
+        counts.set(key, current);
+      });
 
     return (
-      products.reduce((total, product) => total + product.price, 0) /
-      products.length
+      Array.from(counts.values()).sort((a, b) => b.count - a.count)[0]
+        ?.name ?? ""
     );
-  };
+  }, [sellerPrices, selectedCategory]);
 
-  // Build historical series separately for each product and unit.
-  // Never compare different products or units as if they were equivalent.
+  const locationComparisons = useMemo(() => {
+    if (!referenceProduct) return [];
+
+    const grouped = new Map<
+      string,
+      {
+        location: string;
+        count: number;
+        total: number;
+        lowest: number;
+        highest: number;
+      }
+    >();
+
+    sellerPrices
+      .filter(
+        (product) =>
+          product.category === selectedCategory &&
+          sameText(product.name, referenceProduct)
+      )
+      .forEach((product) => {
+        const location = product.location?.trim();
+
+        if (!location) return;
+
+        const key = location.toLowerCase();
+
+        const current = grouped.get(key) ?? {
+          location,
+          count: 0,
+          total: 0,
+          lowest: product.price,
+          highest: product.price,
+        };
+
+        current.count += 1;
+        current.total += product.price;
+        current.lowest = Math.min(current.lowest, product.price);
+        current.highest = Math.max(current.highest, product.price);
+
+        grouped.set(key, current);
+      });
+
+    return Array.from(grouped.values())
+      .map((group) => {
+        const range = getHistoricalRange(
+          marketHistory,
+          referenceProduct,
+          group.location
+        ) ?? { min: group.lowest, max: group.highest };
+
+        return {
+          location: group.location,
+          price: group.total / group.count,
+          range,
+          change: getHistoricalChange(
+            marketHistory,
+            referenceProduct,
+            group.location
+          ),
+        };
+      })
+      .sort((a, b) => a.location.localeCompare(b.location));
+  }, [sellerPrices, marketHistory, selectedCategory, referenceProduct]);
+
+  // --------------------------------------------------
+  // PRICE TREND OPTIONS
+  // --------------------------------------------------
+
   const trendOptions = useMemo(() => {
     const groups = new Map<
       string,
-      { key: string; label: string; records: MarketPriceRecord[] }
+      {
+        key: string;
+        label: string;
+        records: MarketPriceRecord[];
+      }
     >();
 
     filteredHistory.forEach((record) => {
@@ -277,722 +631,821 @@ export default function MarketPrice() {
         100
       : null;
 
-  // Compare current asking prices in each location for the selected category.
-  const locationComparisons = useMemo(() => {
-    const products = sellerPrices.filter(
-      (product) =>
-        selectedCategory === "All" ||
-        product.category === selectedCategory
-    );
+  // --------------------------------------------------
+  // LATEST UPDATE
+  // --------------------------------------------------
 
-    const grouped = new Map<
-      string,
-      { location: string; count: number; total: number; lowest: number }
-    >();
+  const latestUpdate = useMemo(() => {
+    const dates = [
+      ...sellerPrices.map((p) => p.createdAt),
+      ...marketHistory.map((p) => p.recordedAt),
+    ]
+      .filter(Boolean)
+      .map((date) => new Date(date!).getTime())
+      .filter((date) => !Number.isNaN(date));
 
-    products.forEach((product) => {
-      const location = product.location?.trim();
+    return dates.length
+      ? dateLabel(new Date(Math.max(...dates)).toISOString())
+      : "Not available";
+  }, [sellerPrices, marketHistory]);
 
-      if (!location) return;
+  // --------------------------------------------------
+  // ACTIONS
+  // --------------------------------------------------
 
-      const key = location.toLowerCase();
-      const current = grouped.get(key) ?? {
-        location,
-        count: 0,
-        total: 0,
-        lowest: product.price,
-      };
-
-      current.count += 1;
-      current.total += product.price;
-      current.lowest = Math.min(current.lowest, product.price);
-
-      grouped.set(key, current);
-    });
-
-    return Array.from(grouped.values())
-      .map((group) => ({
-        ...group,
-        average: group.total / group.count,
-      }))
-      .sort((a, b) => a.average - b.average);
-  }, [sellerPrices, selectedCategory]);
-
-  const clearFilters = () => {
-    setSelectedCategory("All");
-    setSelectedLocation("All");
-    setSearchTerm("");
-    setSortBy("newest");
+  const selectCategory = (category: Category) => {
+    setSelectedCategory(category);
+    setTrendProduct("");
   };
 
-  const hasActiveFilters =
-    selectedCategory !== "All" ||
-    selectedLocation !== "All" ||
-    searchTerm.trim() !== "";
+  const applyLocation = () => {
+    setSelectedLocation(draftLocation);
+    setTrendProduct("");
+  };
 
-  const resetTrend = () => setTrendProduct("");
+  const clearFilters = () => {
+    setSelectedLocation("All");
+    setDraftLocation("All");
+    setTrendProduct("");
+  };
+
+  const activeCategory =
+    categories.find((item) => item.name === selectedCategory) ??
+    categories[0];
+
+  const ActiveIcon = activeCategory.icon;
+
+  // --------------------------------------------------
+  // RENDER
+  // --------------------------------------------------
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-[#f5f8f7]">
       <Topbar />
       <Navbar />
 
-      {/* Page heading */}
-      <section className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
-            <div>
-              <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-green-50 px-3 py-1.5 text-sm font-medium text-green-800">
-                <TrendingUp size={16} />
-                Poultry market insights
-              </span>
+      <div className="mx-auto max-w-[1400px] px-3 py-4 sm:px-5 lg:px-7">
+        {/* ==========================================
+            1. HERO BANNER
+        ========================================== */}
 
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-                Market Prices
-              </h1>
-
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600 sm:text-base">
-                Explore seller asking prices, compare poultry markets by
-                location, and track recorded price changes over time.
-              </p>
+        <section
+          className="relative mb-4 flex min-h-[130px] items-center overflow-hidden rounded-xl bg-[#e9f3ed] bg-cover bg-center shadow-sm"
+          style={{
+            backgroundImage: `
+              linear-gradient(
+                90deg,
+                rgba(239,248,242,0.98) 0%,
+                rgba(239,248,242,0.94) 40%,
+                rgba(239,248,242,0.1) 100%
+              ),
+              url(${heroImage})
+            `,
+          }}
+        >
+          <div className="relative z-10 max-w-xl px-5 py-5 sm:px-7">
+            <div className="mb-1.5 flex items-center gap-2 text-sm font-medium text-slate-700">
+              <TrendingUp size={19} className="text-green-700" />
+              Market Prices
             </div>
 
-            <div className="flex items-center gap-3 rounded-xl border border-green-100 bg-green-50 p-4">
-              <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-white text-green-700">
-                <Package size={23} />
-              </span>
-              <div>
-                <p className="text-sm text-gray-600">Active listings</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {loading ? "—" : sellerPrices.length}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#102a43] sm:text-[32px]">
+              Poultry Products Price
+            </h1>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        {/* 1. Market overview */}
-        <section className="mb-12">
-          <div className="mb-5">
-            <h2 className="text-xl font-bold text-gray-900 sm:text-2xl">
-              1. Market Overview
-            </h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Category-level averages from current seller listings, plus
-              recorded historical price movement.
+            <p className="mt-2 max-w-md text-xs leading-5 text-slate-600 sm:text-[13px]">
+              Check the latest prices of poultry products by category and
+              location. Make better decisions for your farm or business.
             </p>
           </div>
+        </section>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              { name: "Eggs", color: "amber", icon: Package },
-              { name: "Chickens", color: "green", icon: Tags },
-              { name: "Feed", color: "blue", icon: Package },
-            ].map((item) => {
-              const average = categoryAverage(item.name);
+        {/* ==========================================
+            2. CATEGORY TABS
+        ========================================== */}
 
-              const Icon = item.icon;
+        <section className="mb-4">
+          <div className="grid max-w-4xl grid-cols-2 gap-2.5 sm:grid-cols-4">
+            {categories.map((category) => {
+              const Icon = category.icon;
+              const active = selectedCategory === category.name;
 
               return (
-                <div
-                  key={item.name}
-                  className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+                <button
+                  key={category.name}
+                  type="button"
+                  onClick={() => selectCategory(category.name)}
+                  className={`flex min-h-[48px] items-center justify-center gap-2.5 rounded-lg px-3 py-3 text-xs font-semibold transition sm:text-sm ${
+                    active
+                      ? "bg-[#198754] text-white shadow-sm"
+                      : "bg-[#edf2f7] text-slate-600 hover:bg-green-50"
+                  }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-500">
-                      {item.name} prices
-                    </span>
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-50 text-green-700">
-                      <Icon size={21} />
-                    </span>
-                  </div>
-
-                  <p className="mt-4 text-2xl font-bold text-gray-900">
-                    {loading
-                      ? "—"
-                      : average === null
-                        ? "No listings"
-                        : money(average)}
-                  </p>
-
-                  <p className="mt-2 text-xs leading-5 text-gray-500">
-                    {average === null
-                      ? "No active listings in this category"
-                      : "Average asking price per listing; units may differ"}
-                  </p>
-                </div>
+                  <Icon
+                    size={20}
+                    className={
+                      active ? "fill-white/90 text-white" : "text-slate-600"
+                    }
+                  />
+                  <span>{category.label}</span>
+                </button>
               );
             })}
-
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-500">
-                  Recent price movement
-                </span>
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-50 text-green-700">
-                  {priceDirection === "up" ? (
-                    <TrendingUp size={21} />
-                  ) : priceDirection === "down" ? (
-                    <TrendingDown size={21} />
-                  ) : (
-                    <Minus size={21} />
-                  )}
-                </span>
-              </div>
-
-              <p className="mt-4 text-2xl font-bold text-gray-900">
-                {priceChange === null
-                  ? "Not available"
-                  : `${priceChange > 0 ? "+" : ""}${priceChange.toFixed(1)}%`}
-              </p>
-
-              <p className="mt-2 text-xs leading-5 text-gray-500">
-                {priceChange === null
-                  ? "Requires at least two observations for the same product and unit"
-                  : `Change for ${activeTrend?.label ?? "selected product"}`}
-              </p>
-            </div>
           </div>
         </section>
 
-        {/* Shared search and filters */}
-        <section className="mb-12 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-          <div className="mb-5 flex items-center gap-2">
-            <BarChart3 size={20} className="text-green-700" />
-            <h2 className="font-semibold text-gray-900">
-              Explore prices
-            </h2>
-          </div>
+        {/* ==========================================
+            3. MAIN DASHBOARD GRID
+            (lg: so the sidebar sits beside the tables
+            on normal laptop screens)
+        ========================================== */}
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="xl:col-span-2">
-              <label
-                htmlFor="market-search"
-                className="mb-2 block text-sm font-medium text-gray-700"
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
+          {/* ========================================
+              LEFT CONTENT
+          ======================================== */}
+
+          <div className="min-w-0 space-y-4 lg:col-span-8">
+            {/* SAMPLE DATA NOTICE */}
+
+            {sampleNotice && (
+              <div
+                role="status"
+                className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"
               >
-                Search products
-              </label>
-              <div className="relative">
-                <Search
-                  size={18}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                />
-                <input
-                  id="market-search"
-                  type="search"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search eggs, feed, chickens..."
-                  className="w-full rounded-xl border border-gray-300 py-3 pl-10 pr-4 text-sm outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="market-category"
-                className="mb-2 block text-sm font-medium text-gray-700"
-              >
-                Category
-              </label>
-              <select
-                id="market-category"
-                value={selectedCategory}
-                onChange={(e) => {
-                  setSelectedCategory(e.target.value);
-                  resetTrend();
-                }}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-3 text-sm outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100"
-              >
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category === "All" ? "All categories" : category}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="market-location"
-                className="mb-2 block text-sm font-medium text-gray-700"
-              >
-                Location
-              </label>
-              <select
-                id="market-location"
-                value={selectedLocation}
-                onChange={(e) => {
-                  setSelectedLocation(e.target.value);
-                  resetTrend();
-                }}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-3 text-sm outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100"
-              >
-                {locations.map((location) => (
-                  <option key={location} value={location}>
-                    {location === "All" ? "All locations" : location}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4">
-            <p className="text-sm text-gray-500">
-              {filteredProducts.length} seller listings ·{" "}
-              {filteredHistory.length} historical observations
-            </p>
-
-            {hasActiveFilters && (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 hover:text-green-900"
-              >
-                <X size={16} />
-                Clear filters
-              </button>
-            )}
-          </div>
-        </section>
-
-        {/* 2. Price trends */}
-        <section className="mb-12">
-          <div className="mb-5">
-            <h2 className="text-xl font-bold text-gray-900 sm:text-2xl">
-              2. Price Trends
-            </h2>
-            <p className="mt-1 text-sm text-gray-500">
-              View recorded price observations over time for the same product
-              and unit.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-            {historyError ? (
-              <div className="rounded-xl bg-amber-50 p-5 text-sm text-amber-800">
-                Historical price data could not be loaded: {historyError}
-              </div>
-            ) : loading ? (
-              <div className="py-12 text-center text-sm text-gray-500">
-                Loading price history...
-              </div>
-            ) : trendOptions.length === 0 ? (
-              <div className="py-10 text-center">
-                <History
-                  size={38}
-                  className="mx-auto mb-3 text-gray-400"
-                />
-                <h3 className="font-semibold text-gray-900">
-                  No historical observations yet
-                </h3>
-                <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-gray-500">
-                  The trend chart will appear when market prices have been
-                  recorded over time. Current seller listings are not
-                  historical observations.
+                <TriangleAlert size={16} className="mt-0.5 shrink-0" />
+                <p>
+                  Showing sample data. {sampleNotice}
                 </p>
               </div>
-            ) : (
-              <>
-                <label
-                  htmlFor="trend-product"
-                  className="mb-2 block text-sm font-medium text-gray-700"
-                >
-                  Product and unit
-                </label>
+            )}
+
+            {/* LOCATION SEARCH */}
+
+            <section className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
+              <label
+                htmlFor="market-location"
+                className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-700"
+              >
+                <MapPin size={15} className="text-green-700" />
+                Select Location
+              </label>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <select
-                  id="trend-product"
-                  value={trendProduct}
-                  onChange={(e) => setTrendProduct(e.target.value)}
-                  className="mb-6 w-full max-w-md rounded-xl border border-gray-300 bg-white px-3 py-3 text-sm outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100"
+                  id="market-location"
+                  value={draftLocation}
+                  onChange={(e) => setDraftLocation(e.target.value)}
+                  className="w-full max-w-[260px] rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100"
                 >
-                  <option value="">Choose a product to view its trend</option>
-                  {trendOptions.map((group) => (
-                    <option key={group.key} value={group.key}>
-                      {group.label}
+                  {locations.map((location) => (
+                    <option key={location} value={location}>
+                      {location === "All" ? "All locations" : location}
                     </option>
                   ))}
                 </select>
 
-                {!activeTrend ? (
-                  <p className="py-8 text-center text-sm text-gray-500">
-                    Choose a product to display its historical prices.
-                  </p>
-                ) : trendRecords.length < 2 ? (
-                  <p className="rounded-xl bg-gray-50 px-4 py-8 text-center text-sm text-gray-600">
-                    This product has only one recorded observation. At least
-                    two observations are needed to show a price trend.
-                  </p>
-                ) : (
-                  <div>
-                    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">
-                          {activeTrend.label}
-                        </h3>
-                        <p className="mt-1 text-sm text-gray-500">
-                          {trendRecords.length} observations
-                        </p>
-                      </div>
+                <button
+                  type="button"
+                  onClick={applyLocation}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#198754] px-8 py-2.5 text-sm font-semibold text-white transition hover:bg-green-800"
+                >
+                  Search
+                </button>
+              </div>
+            </section>
 
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500">
-                          Latest recorded price
-                        </p>
-                        <p className="text-xl font-bold text-green-700">
-                          {money(trendRecords[trendRecords.length - 1].price)}
-                        </p>
-                      </div>
-                    </div>
+            {/* PRICES CARD (main table + by-location table) */}
 
-                    {(() => {
-                      const width = 720;
-                      const height = 260;
-                      const padX = 44;
-                      const padY = 28;
+            <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+              {/* Header */}
+              <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-3 pt-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#2d5a46] text-white">
+                    <ActiveIcon size={19} className="fill-white/20" />
+                  </span>
 
-                      const prices = trendRecords.map((record) => record.price);
-                      const min = Math.min(...prices);
-                      const max = Math.max(...prices);
-                      const range = max - min || 1;
+                  <h2 className="text-lg font-bold text-slate-800">
+                    {activeCategory.title}
+                  </h2>
+                </div>
 
-                      const points = trendRecords.map((record, index) => {
-                        const x =
-                          padX +
-                          (index / (trendRecords.length - 1)) *
-                            (width - padX * 2);
+                <div className="flex flex-wrap items-center gap-4 text-[11px] text-gray-500">
+                  <span className="flex items-center gap-1.5">
+                    <MapPin size={14} className="text-slate-700" />
+                    Location:{" "}
+                    {selectedLocation === "All"
+                      ? "All locations"
+                      : selectedLocation}
+                  </span>
 
-                        const y =
-                          height -
-                          padY -
-                          ((record.price - min) / range) *
-                            (height - padY * 2);
+                  <span className="flex items-center gap-1.5">
+                    <CalendarDays size={14} className="text-slate-700" />
+                    Last updated: {latestUpdate}
+                  </span>
+                </div>
+              </div>
 
-                        return { x, y, record };
-                      });
+              {error && !sampleNotice && (
+                <div
+                  role="alert"
+                  className="mx-4 mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700"
+                >
+                  Could not load seller prices: {error}
+                </div>
+              )}
 
-                      const line = points
-                        .map((point) => `${point.x},${point.y}`)
-                        .join(" ");
+              {/* Main product table */}
+              <div className="px-4 pb-4">
+                {loading ? (
+                  <div className="py-12 text-center text-sm text-gray-500">
+                    Loading market prices...
+                  </div>
+                ) : !error && filteredProducts.length === 0 ? (
+                  <div className="rounded-lg border border-gray-200 px-4 py-12 text-center">
+                    <Package
+                      size={35}
+                      className="mx-auto mb-3 text-gray-300"
+                    />
 
-                      return (
-                        <div className="w-full overflow-x-auto">
-                          <svg
-                            viewBox={`0 0 ${width} ${height + 36}`}
-                            role="img"
-                            aria-label={`Historical prices for ${activeTrend.label}`}
-                            className="h-auto w-full min-w-[520px]"
-                          >
-                            {[0, 1, 2, 3].map((tick) => {
-                              const y =
-                                padY +
-                                (tick / 3) * (height - padY * 2);
+                    <h3 className="text-sm font-semibold text-slate-700">
+                      No products found
+                    </h3>
 
-                              const value =
-                                max - (tick / 3) * (max - min);
-
-                              return (
-                                <g key={tick}>
-                                  <line
-                                    x1={padX}
-                                    y1={y}
-                                    x2={width - padX}
-                                    y2={y}
-                                    stroke="#e5e7eb"
-                                    strokeDasharray="4 4"
-                                  />
-                                  <text
-                                    x={padX - 8}
-                                    y={y + 4}
-                                    textAnchor="end"
-                                    fontSize="11"
-                                    fill="#6b7280"
-                                  >
-                                    {value.toLocaleString()}
-                                  </text>
-                                </g>
-                              );
-                            })}
-
-                            <polyline
-                              points={line}
-                              fill="none"
-                              stroke="#15803d"
-                              strokeWidth="3"
-                              strokeLinejoin="round"
-                              strokeLinecap="round"
-                            />
-
-                            {points.map((point, index) => (
-                              <g key={`${point.record._id}-${index}`}>
-                                <circle
-                                  cx={point.x}
-                                  cy={point.y}
-                                  r="5"
-                                  fill="#15803d"
-                                  stroke="white"
-                                  strokeWidth="2"
-                                >
-                                  <title>
-                                    {`${money(point.record.price)} on ${dateLabel(point.record.recordedAt)}`}
-                                  </title>
-                                </circle>
-                              </g>
-                            ))}
-
-                            {[
-                              points[0],
-                              points[Math.floor((points.length - 1) / 2)],
-                              points[points.length - 1],
-                            ].map((point, index) => (
-                              <text
-                                key={`${point.record._id}-date-${index}`}
-                                x={point.x}
-                                y={height + 16}
-                                textAnchor={
-                                  index === 0
-                                    ? "start"
-                                    : index === 2
-                                      ? "end"
-                                      : "middle"
-                                }
-                                fontSize="11"
-                                fill="#6b7280"
-                              >
-                                {dateLabel(point.record.recordedAt)}
-                              </text>
-                            ))}
-                          </svg>
-                        </div>
-                      );
-                    })()}
-
-                    <p className="mt-3 text-xs leading-5 text-gray-500">
-                      The chart connects recorded observations in date order.
-                      It does not predict future prices.
+                    <p className="mt-1 text-xs text-gray-500">
+                      Try changing the category or location.
                     </p>
+
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="mt-3 text-xs font-semibold text-green-700 hover:underline"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                ) : !error ? (
+                  <div className="overflow-hidden rounded-lg border border-gray-200">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[620px] text-left text-xs">
+                        <thead className="bg-[#eef3f8] text-[11px] font-semibold text-slate-700">
+                          <tr>
+                            <th className="px-4 py-3">Product</th>
+                            <th className="px-4 py-3">Unit</th>
+                            <th className="px-4 py-3">Price (ETB)</th>
+                            <th className="px-4 py-3">Price Range (ETB)</th>
+                            <th className="px-4 py-3">Change</th>
+                          </tr>
+                        </thead>
+
+                        <tbody className="divide-y divide-gray-100">
+                          {filteredProducts.map((product) => {
+                            const range = getHistoricalRange(
+                              marketHistory,
+                              product.name,
+                              product.location
+                            );
+
+                            const change = getHistoricalChange(
+                              marketHistory,
+                              product.name,
+                              product.location
+                            );
+
+                            return (
+                              <tr
+                                key={product._id}
+                                className="transition hover:bg-green-50/40"
+                              >
+                                <td className="px-4 py-3">
+                                  <span className="flex items-center gap-3">
+                                    <span
+                                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${iconStyles[selectedCategory]}`}
+                                    >
+                                      <ActiveIcon size={16} />
+                                    </span>
+
+                                    <span className="font-semibold text-slate-800">
+                                      {product.name}
+                                    </span>
+                                  </span>
+                                </td>
+
+                                <td className="px-4 py-3 text-gray-600">
+                                  {product.quantity || "—"}
+                                </td>
+
+                                <td className="whitespace-nowrap px-4 py-3 font-bold text-slate-800">
+                                  {num(product.price)}
+                                </td>
+
+                                <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                                  {range
+                                    ? `${num(range.min)} – ${num(range.max)}`
+                                    : "—"}
+                                </td>
+
+                                <td className="whitespace-nowrap px-4 py-3">
+                                  <ChangeCell change={change} />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Prices by location */}
+              <div className="mx-4 mb-4 overflow-hidden rounded-lg border border-gray-200">
+                <div className="bg-[#eaf5ef] px-4 py-2.5">
+                  <h3 className="text-xs font-bold text-slate-800">
+                    {activeCategory.label} Prices by Location{" "}
+                    {referenceProduct && (
+                      <span className="font-normal text-gray-500">
+                        – {referenceProduct}
+                      </span>
+                    )}
+                  </h3>
+                </div>
+
+                {loading ? (
+                  <div className="p-8 text-center text-xs text-gray-500">
+                    Loading location prices...
+                  </div>
+                ) : locationComparisons.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-gray-500">
+                    No location prices available.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[500px] text-left text-xs">
+                      <thead className="bg-white text-[11px] font-semibold text-slate-600">
+                        <tr className="border-b border-gray-100">
+                          <th className="px-4 py-3">Location</th>
+                          <th className="px-4 py-3">Price (ETB)</th>
+                          <th className="px-4 py-3">Range (ETB)</th>
+                          <th className="px-4 py-3">Change</th>
+                        </tr>
+                      </thead>
+
+                      <tbody className="divide-y divide-gray-100">
+                        {locationComparisons.map((item) => (
+                          <tr
+                            key={item.location}
+                            className={`hover:bg-green-50/40 ${
+                              sameText(selectedLocation, item.location)
+                                ? "bg-green-50/60"
+                                : ""
+                            }`}
+                          >
+                            <td className="px-4 py-3">
+                              <span className="flex items-center gap-2 font-medium text-slate-700">
+                                <MapPin
+                                  size={14}
+                                  className="fill-green-700 text-green-700"
+                                />
+                                {item.location}
+                              </span>
+                            </td>
+
+                            <td className="px-4 py-3 font-semibold text-slate-800">
+                              {num(item.price)}
+                            </td>
+
+                            <td className="px-4 py-3 text-gray-600">
+                              {num(item.range.min)} – {num(item.range.max)}
+                            </td>
+
+                            <td className="whitespace-nowrap px-4 py-3">
+                              <ChangeCell change={item.change} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
-              </>
-            )}
-          </div>
-        </section>
+              </div>
 
-        {/* 3. Prices by location */}
-        <section className="mb-12">
-          <div className="mb-5">
-            <h2 className="text-xl font-bold text-gray-900 sm:text-2xl">
-              3. Prices by Location
-            </h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Compare current seller asking prices across the locations in
-              your database.
-            </p>
-          </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 bg-gray-50 px-4 py-3">
+                <span className="text-[11px] text-gray-500">
+                  {filteredProducts.length} seller listings
+                </span>
 
-          {loading ? (
-            <div className="rounded-2xl border border-gray-200 bg-white p-8 text-sm text-gray-500">
-              Loading location comparisons...
-            </div>
-          ) : locationComparisons.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
-              No location price comparisons are available.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {locationComparisons.map((location) => {
-                const highestAverage = Math.max(
-                  ...locationComparisons.map((item) => item.average)
-                );
+                <span className="text-[10px] text-gray-400">
+                  Prices in Ethiopian Birr. Averages are calculated from
+                  seller listings, not standardized market rates.
+                </span>
+              </div>
+            </section>
 
-                const barWidth =
-                  highestAverage > 0
-                    ? (location.average / highestAverage) * 100
-                    : 0;
+            {/* ======================================
+                PRICE TREND SECTION
+            ====================================== */}
 
-                return (
-                  <article
-                    key={location.location}
-                    className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+            <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-700">
+                  <BarChart3 size={20} />
+                </span>
+
+                <div>
+                  <h2 className="text-sm font-bold text-slate-800">
+                    Historical Price Trends
+                  </h2>
+
+                  <p className="text-[11px] text-gray-500">
+                    Track recorded price movements over time
+                  </p>
+                </div>
+              </div>
+
+              {historyError ? (
+                <div className="rounded-lg bg-amber-50 p-4 text-xs text-amber-800">
+                  Could not load historical prices: {historyError}
+                </div>
+              ) : loading ? (
+                <div className="py-8 text-center text-xs text-gray-500">
+                  Loading price history...
+                </div>
+              ) : trendOptions.length === 0 ? (
+                <div className="py-8 text-center">
+                  <History
+                    size={34}
+                    className="mx-auto mb-2 text-gray-300"
+                  />
+
+                  <p className="text-sm font-semibold text-slate-700">
+                    No historical observations yet
+                  </p>
+
+                  <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-gray-500">
+                    Price trends will appear when historical prices have
+                    been recorded for the selected category and location.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <label
+                    htmlFor="trend-product"
+                    className="mb-2 block text-xs font-semibold text-gray-700"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-700">
-                          <MapPin size={20} />
-                        </span>
+                    Select Product
+                  </label>
+
+                  <select
+                    id="trend-product"
+                    value={trendProduct}
+                    onChange={(e) => setTrendProduct(e.target.value)}
+                    className="mb-5 w-full max-w-sm rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-xs outline-none focus:border-green-600"
+                  >
+                    <option value="">Choose a product</option>
+
+                    {trendOptions.map((group) => (
+                      <option key={group.key} value={group.key}>
+                        {group.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  {!activeTrend ? (
+                    <p className="py-5 text-center text-xs text-gray-500">
+                      Choose a product to display its historical trend.
+                    </p>
+                  ) : trendRecords.length < 2 ? (
+                    <p className="rounded-lg bg-gray-50 p-6 text-center text-xs text-gray-600">
+                      At least two observations are needed to display a
+                      price trend.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                         <div>
-                          <h3 className="font-semibold text-gray-900">
-                            {location.location}
+                          <h3 className="text-sm font-semibold text-slate-800">
+                            {activeTrend.label}
                           </h3>
-                          <p className="mt-1 text-xs text-gray-500">
-                            {location.count} seller listing
-                            {location.count === 1 ? "" : "s"}
+
+                          <p className="mt-1 text-[11px] text-gray-500">
+                            {trendRecords.length} recorded observations
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="text-[10px] text-gray-500">
+                            Latest recorded price
+                          </p>
+
+                          <p className="text-lg font-bold text-green-700">
+                            {num(
+                              trendRecords[trendRecords.length - 1].price
+                            )}{" "}
+                            ETB
                           </p>
                         </div>
                       </div>
-                    </div>
 
-                    <p className="mt-5 text-sm text-gray-500">
-                      Average listed price
-                    </p>
-                    <p className="mt-1 text-2xl font-bold text-gray-900">
-                      {money(location.average)}
-                    </p>
+                      {(() => {
+                        const width = 720;
+                        const height = 240;
+                        const padX = 48;
+                        const padY = 25;
 
-                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-gray-100">
-                      <div
-                        className="h-full rounded-full bg-green-600"
-                        style={{ width: `${barWidth}%` }}
-                      />
-                    </div>
+                        const prices = trendRecords.map(
+                          (record) => record.price
+                        );
 
-                    <div className="mt-4 flex justify-between gap-3 border-t border-gray-100 pt-3 text-xs text-gray-500">
-                      <span>Lowest listing</span>
-                      <span className="font-semibold text-gray-700">
-                        {money(location.lowest)}
-                      </span>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
+                        const min = Math.min(...prices);
+                        const max = Math.max(...prices);
+                        const range = max - min || 1;
 
-          <p className="mt-3 text-xs leading-5 text-gray-500">
-            These are averages of listing prices, not standardized market
-            rates. Products, quantities, and units can differ between sellers.
-          </p>
-        </section>
+                        const points = trendRecords.map((record, index) => ({
+                          x:
+                            padX +
+                            (index / (trendRecords.length - 1)) *
+                              (width - padX * 2),
 
-        {/* 4. Market price table */}
-        <section className="mb-12">
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 sm:text-2xl">
-                4. Market Price Table
-              </h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Search and compare current seller prices in Ethiopian birr.
-              </p>
-            </div>
+                          y:
+                            height -
+                            padY -
+                            ((record.price - min) / range) *
+                              (height - padY * 2),
 
-            <span className="rounded-full bg-green-100 px-3 py-1.5 text-sm font-semibold text-green-800">
-              {filteredProducts.length} listings
-            </span>
+                          record,
+                        }));
+
+                        const line = points
+                          .map((point) => `${point.x},${point.y}`)
+                          .join(" ");
+
+                        return (
+                          <div className="w-full overflow-x-auto">
+                            <svg
+                              viewBox={`0 0 ${width} ${height + 35}`}
+                              role="img"
+                              aria-label={`Historical prices for ${activeTrend.label}`}
+                              className="h-auto w-full min-w-[450px]"
+                            >
+                              {[0, 1, 2, 3].map((tick) => {
+                                const y =
+                                  padY + (tick / 3) * (height - padY * 2);
+
+                                const value =
+                                  max - (tick / 3) * (max - min);
+
+                                return (
+                                  <g key={tick}>
+                                    <line
+                                      x1={padX}
+                                      y1={y}
+                                      x2={width - padX}
+                                      y2={y}
+                                      stroke="#e5e7eb"
+                                      strokeDasharray="4 4"
+                                    />
+
+                                    <text
+                                      x={padX - 8}
+                                      y={y + 4}
+                                      textAnchor="end"
+                                      fontSize="11"
+                                      fill="#64748b"
+                                    >
+                                      {value.toLocaleString()}
+                                    </text>
+                                  </g>
+                                );
+                              })}
+
+                              <polyline
+                                points={line}
+                                fill="none"
+                                stroke="#198754"
+                                strokeWidth="3"
+                                strokeLinejoin="round"
+                                strokeLinecap="round"
+                              />
+
+                              {points.map((point, index) => (
+                                <g key={`${point.record._id}-${index}`}>
+                                  <circle
+                                    cx={point.x}
+                                    cy={point.y}
+                                    r="5"
+                                    fill="#198754"
+                                    stroke="white"
+                                    strokeWidth="2"
+                                  >
+                                    <title>
+                                      {`${num(point.record.price)} ETB on ${dateLabel(point.record.recordedAt)}`}
+                                    </title>
+                                  </circle>
+                                </g>
+                              ))}
+
+                              {[
+                                points[0],
+                                points[Math.floor((points.length - 1) / 2)],
+                                points[points.length - 1],
+                              ].map((point, index) => (
+                                <text
+                                  key={`${point.record._id}-date-${index}`}
+                                  x={point.x}
+                                  y={height + 16}
+                                  textAnchor={
+                                    index === 0
+                                      ? "start"
+                                      : index === 2
+                                        ? "end"
+                                        : "middle"
+                                  }
+                                  fontSize="11"
+                                  fill="#64748b"
+                                >
+                                  {dateLabel(point.record.recordedAt)}
+                                </text>
+                              ))}
+                            </svg>
+                          </div>
+                        );
+                      })()}
+
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3">
+                        <span className="text-[10px] text-gray-500">
+                          Historical observations only
+                        </span>
+
+                        <span
+                          className={`flex items-center gap-1 text-xs font-semibold ${
+                            priceDirection === "up"
+                              ? "text-green-700"
+                              : priceDirection === "down"
+                                ? "text-red-600"
+                                : "text-gray-500"
+                          }`}
+                        >
+                          {priceDirection === "up" ? (
+                            <TrendingUp size={15} />
+                          ) : priceDirection === "down" ? (
+                            <TrendingDown size={15} />
+                          ) : (
+                            <Minus size={15} />
+                          )}
+
+                          {priceChange === null
+                            ? "Change unavailable"
+                            : `${priceChange > 0 ? "+" : ""}${priceChange.toFixed(1)}%`}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </section>
           </div>
 
-          {error && (
-            <div
-              role="alert"
-              className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
-            >
-              Could not load seller prices: {error}
-            </div>
-          )}
+          {/* ========================================
+              RIGHT SIDEBAR
+          ======================================== */}
 
-          {loading ? (
-            <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center text-sm text-gray-500">
-              Loading market prices...
-            </div>
-          ) : !error && filteredProducts.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
-              <Package size={36} className="mx-auto mb-3 text-gray-400" />
-              <h3 className="font-semibold text-gray-900">
-                No matching listings
-              </h3>
-              <p className="mt-2 text-sm text-gray-500">
-                Change your search or filters to find more products.
+          <aside className="space-y-3 lg:col-span-4">
+            {/* QUICK INFO */}
+
+            <section className="rounded-xl border border-[#d9ebe2] bg-[#eff8f3] p-3 shadow-sm">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-800">
+                <Info size={18} className="fill-green-700 text-white" />
+                <span>Quick Info</span>
+              </h2>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 rounded-lg border border-green-100 bg-white p-3">
+                  <span className="flex h-10 w-10 items-center justify-center text-green-800">
+                    <ActiveIcon size={27} />
+                  </span>
+
+                  <div>
+                    <p className="text-[11px] font-semibold text-slate-700">
+                      Product Type
+                    </p>
+
+                    <p className="text-xs text-gray-500">
+                      {activeCategory.label}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-lg border border-green-100 bg-white p-3">
+                  <span className="flex h-10 w-10 items-center justify-center text-green-800">
+                    <Package size={27} />
+                  </span>
+
+                  <div>
+                    <p className="text-[11px] font-semibold text-slate-700">
+                      Unit
+                    </p>
+
+                    <p className="text-xs text-gray-500">
+                      {activeCategory.unit}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-lg border border-green-100 bg-white p-3">
+                  <span className="flex h-10 w-10 items-center justify-center text-green-800">
+                    <CircleDollarSign size={27} />
+                  </span>
+
+                  <div>
+                    <p className="text-[11px] font-semibold text-slate-700">
+                      Currency
+                    </p>
+
+                    <p className="text-xs text-gray-500">
+                      Ethiopian Birr (ETB)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* WHY PRICES CHANGE */}
+
+            <section className="rounded-xl border border-blue-100 bg-[#eff6fd] p-4 shadow-sm">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-800">
+                <MapPin size={19} className="fill-blue-600 text-blue-600" />
+                Why Prices Change?
+              </h2>
+
+              <ul className="space-y-2 text-xs text-slate-600">
+                <li className="flex gap-2">
+                  <span>•</span>
+                  <span>Seasonality (holidays, festivals)</span>
+                </li>
+
+                <li className="flex gap-2">
+                  <span>•</span>
+                  <span>Feed cost</span>
+                </li>
+
+                <li className="flex gap-2">
+                  <span>•</span>
+                  <span>Supply and demand</span>
+                </li>
+
+                <li className="flex gap-2">
+                  <span>•</span>
+                  <span>Disease outbreaks</span>
+                </li>
+
+                <li className="flex gap-2">
+                  <span>•</span>
+                  <span>Transportation cost</span>
+                </li>
+              </ul>
+            </section>
+
+            {/* TIP */}
+
+            <section className="rounded-xl border border-amber-100 bg-[#fff6e3] p-4 shadow-sm">
+              <h2 className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-800">
+                <Lightbulb
+                  size={21}
+                  className="fill-amber-300 text-amber-600"
+                />
+                Tip
+              </h2>
+
+              <p className="text-xs leading-5 text-slate-600">
+                Prices may vary by region and quality. Always check with
+                local traders for the most accurate price.
               </p>
+            </section>
+
+            {/* IMAGE */}
+
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+              <img
+                src={heroImage}
+                alt="Poultry and eggs"
+                className="h-36 w-full object-cover object-[75%_65%]"
+              />
             </div>
-          ) : !error ? (
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 p-4">
-                <p className="text-sm text-gray-500">
-                  Prices are displayed as listed by each seller.
-                </p>
+          </aside>
+        </div>
 
-                <label className="flex items-center gap-2 text-sm text-gray-600">
-                  <ArrowUpDown size={16} />
-                  <span className="sr-only">Sort products</span>
-                  <select
-                    aria-label="Sort market prices"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="rounded-lg border border-gray-300 bg-white px-3 py-2 outline-none focus:border-green-600"
-                  >
-                    <option value="newest">Newest first</option>
-                    <option value="price-low">Price: low to high</option>
-                    <option value="price-high">Price: high to low</option>
-                    <option value="name">Product name</option>
-                  </select>
-                </label>
-              </div>
+        {/* ==========================================
+            FOOTER
+        ========================================== */}
 
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-sm">
-                  <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-                    <tr>
-                      <th className="px-5 py-4 font-semibold">Product</th>
-                      <th className="px-5 py-4 font-semibold">Category</th>
-                      <th className="px-5 py-4 font-semibold">Asking price</th>
-                      <th className="px-5 py-4 font-semibold">Quantity</th>
-                      <th className="px-5 py-4 font-semibold">Location</th>
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredProducts.map((product) => (
-                      <tr
-                        key={product._id}
-                        className="transition hover:bg-gray-50"
-                      >
-                        <td className="px-5 py-4">
-                          <p className="font-semibold text-gray-900">
-                            {product.name}
-                          </p>
-                          <p className="mt-1 max-w-xs truncate text-xs text-gray-500">
-                            {product.description || "No description"}
-                          </p>
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <span className="inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-800">
-                            {product.category}
-                          </span>
-                        </td>
-
-                        <td className="whitespace-nowrap px-5 py-4 font-bold text-green-700">
-                          {money(product.price)}
-                        </td>
-
-                        <td className="px-5 py-4 text-gray-600">
-                          {product.quantity || "Not specified"}
-                        </td>
-
-                        <td className="px-5 py-4 text-gray-600">
-                          <span className="inline-flex items-center gap-1.5">
-                            <MapPin
-                              size={15}
-                              className="shrink-0 text-gray-400"
-                            />
-                            {product.location || "Not specified"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : null}
-        </section>
-
-        <footer className="border-t border-gray-200 pt-5 text-center text-xs leading-5 text-gray-500">
-          Seller asking prices may differ from completed transaction prices
-          and average market rates. Historical movements are shown only when
-          dated observations are available.
+        <footer className="mt-6 border-t border-gray-200 py-5 text-center">
+          <p className="text-[11px] leading-5 text-gray-500">
+            Seller asking prices may differ from completed transaction
+            prices and average market rates. Historical price movements
+            are shown only when comparable dated observations are
+            available.
+          </p>
         </footer>
       </div>
     </main>

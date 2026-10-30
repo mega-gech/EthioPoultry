@@ -60,15 +60,16 @@ const promotions = [
     action: "/seller/products/add",
   },
   {
-    id: "learn",
-    title: "Poultry Farming Guide",
-    description: "Step-by-step guide to start and manage your poultry farm.",
-    button: "Read Guide",
-    image: farmBrochure,
-    imageAlt: "Poultry farming guide",
-    theme: "amber",
-    action: "/#learn",
-  },
+  id: "market-price",
+  title: "Poultry Market Prices",
+  description:
+    "Explore the latest prices of eggs, chickens, poultry feed, and equipment across different markets.",
+  button: "View Market Prices",
+  image: farmBrochure,
+  imageAlt: "Poultry market prices",
+  theme: "amber",
+  action: "/market",
+},
   {
     id: "health",
     title: "Health & Diseases",
@@ -77,7 +78,7 @@ const promotions = [
     image: veterinaryKit,
     imageAlt: "Poultry veterinary supplies",
     theme: "blue",
-    action: "/#health",
+    action: "/health",
   },
 ] as const;
 
