@@ -1,3 +1,18 @@
+import {
+  LayoutDashboard,
+  ShoppingBag,
+  Heart,
+  Settings,
+  Package,
+  PlusCircle,
+  UserRound,
+} from "lucide-react";
+
+
+
+import DashboardLayout from "./layout/DashboardLayout";
+import type { DashboardMenuItem } from "./components/dashboard/Sidebar";
+
 import { BrowserRouter as Router,  Routes, Route } from 'react-router-dom';
 import Home from "./pages/Home";
 import Products from './pages/Products';
@@ -17,7 +32,75 @@ import ProtectedRoute from './components/ProtectedRoute';
 import HealthTips from "./pages/HealthTips";
 import MarketPrice from "./pages/MarketPrice"
 
+const buyerMenuItems: DashboardMenuItem[] = [
+  {
+    label: "Dashboard",
+    to: "/buyer/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "My Orders",
+    to: "/buyer/orders",
+    icon: ShoppingBag,
+  },
+  {
+    label: "Favorites",
+    to: "/buyer/favorites",
+    icon: Heart,
+  },
+  {
+    label: "Settings",
+    to: "/buyer/settings",
+    icon: Settings,
+  },
+];
+
+const sellerMenuItems: DashboardMenuItem[] = [
+  {
+    label: "Dashboard",
+    to: "/seller/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "My Products",
+    to: "/seller/products",
+    icon: Package,
+  },
+  {
+    label: "Add Product",
+    to: "/seller/products/add",
+    icon: PlusCircle,
+  },
+  {
+    label: "Profile",
+    to: "/seller/profile",
+    icon: UserRound,
+  },
+];
+
+type LoggedInUser = {
+  id?: string;
+  name: string;
+  email: string;
+  role: "buyer" | "seller" | "admin";
+};
+
+function getLoggedInUser(): LoggedInUser | null {
+  const storedUser = localStorage.getItem("user");
+
+  if (!storedUser) return null;
+
+  try {
+    return JSON.parse(storedUser) as LoggedInUser;
+  } catch {
+    return null;
+  }
+}
+
 function App() {
+
+  const user = getLoggedInUser();
+
   return (
       <Routes>
         <Route path="/" element={<Home />} />
@@ -31,22 +114,46 @@ function App() {
 
         
 {/* Buyer-only pages */}
+{/* Buyer-only pages */}
 <Route element={<ProtectedRoute allowedRole="buyer" />}>
-  <Route path="/buyer/dashboard" element={<BuyerDashboard />} />
-  <Route path="/buyer/orders" element={<BuyerOrders />} />
-  <Route path="/buyer/favorites" element={<BuyerFavorites />} />
-  <Route path="/buyer/settings" element={<BuyerSettings />} />
+  <Route
+    element={
+      <DashboardLayout
+        role="buyer"
+        menuItems={buyerMenuItems}
+        userName="Buyer"
+      />
+    }
+  >
+    <Route path="/buyer/dashboard" element={<BuyerDashboard />} />
+    <Route path="/buyer/orders" element={<BuyerOrders />} />
+    <Route path="/buyer/favorites" element={<BuyerFavorites />} />
+    <Route path="/buyer/settings" element={<BuyerSettings />} />
+  </Route>
 </Route>
+
 
 {/* Seller-only pages */}
 <Route element={<ProtectedRoute allowedRole="seller" />}>
-  <Route path="/seller/dashboard" element={<SellerDashboard />} />
-  <Route path="/seller/products" element={<SellerProducts />} />
-  <Route path="/seller/products/add" element={<AddProduct />} />
-  <Route path="/seller/products/edit/:id" element={<EditProduct />}
-  />
-  <Route path="/seller/profile" element={<SellerProfile />} />
+  <Route
+    element={
+      <DashboardLayout
+        role="seller"
+        menuItems={sellerMenuItems}
+        userName={user?.name || "Seller"}
+        userEmail={user?.email}
+      />
+    }
+  >
+    <Route path="/seller/dashboard" element={<SellerDashboard />} />
+    <Route path="/seller/products" element={<SellerProducts />} />
+    <Route path="/seller/products/add" element={<AddProduct />} />
+    <Route path="/seller/products/edit/:id" element={<EditProduct />} />
+    <Route path="/seller/profile" element={<SellerProfile />} />
+  </Route>
 </Route>
+
+
       </Routes>
   );
 }
