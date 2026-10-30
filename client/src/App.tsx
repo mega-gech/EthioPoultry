@@ -5,7 +5,6 @@ import {
   Settings,
   Package,
   PlusCircle,
-  UserRound,
 } from "lucide-react";
 
 
@@ -17,7 +16,6 @@ import { BrowserRouter as Router,  Routes, Route } from 'react-router-dom';
 import Home from "./pages/Home";
 import Products from './pages/Products';
 import ProductDetails from './pages/ProductDetails';
-import SellerProfile from './pages/SellerDashboard/SellerProfile';
 import Login from './pages/Login'
 import Register from './pages/Register'
 import BuyerDashboard from './pages/buyerProfile/BuyerDashboard';
@@ -71,11 +69,7 @@ const sellerMenuItems: DashboardMenuItem[] = [
     to: "/seller/products/add",
     icon: PlusCircle,
   },
-  {
-    label: "Profile",
-    to: "/seller/profile",
-    icon: UserRound,
-  },
+  
 ];
 
 type LoggedInUser = {
@@ -108,7 +102,6 @@ function App() {
         <Route path="/health" element = {<HealthTips/>} />
         <Route path="/market" element = {<MarketPrice />} />
         <Route path="/products/:id" element={<ProductDetails />} />
-        <Route path='/sellerProfile/:id' element={<SellerProfile />}/>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
@@ -118,10 +111,12 @@ function App() {
 <Route element={<ProtectedRoute allowedRole="buyer" />}>
   <Route
     element={
+      
       <DashboardLayout
         role="buyer"
         menuItems={buyerMenuItems}
-        userName="Buyer"
+        userName={user?.name || "Buyer"}
+        userEmail={user?.email}
       />
     }
   >
@@ -149,7 +144,6 @@ function App() {
     <Route path="/seller/products" element={<SellerProducts />} />
     <Route path="/seller/products/add" element={<AddProduct />} />
     <Route path="/seller/products/edit/:id" element={<EditProduct />} />
-    <Route path="/seller/profile" element={<SellerProfile />} />
   </Route>
 </Route>
 

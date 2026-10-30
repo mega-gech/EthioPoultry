@@ -6,11 +6,16 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { getMyProducts } from "../../services/sellerService";
+
+
+
 
 const stats = [
   {
     title: "Products",
-    value: "24",
+    value: "0",
     description: "Listed products",
     icon: Package,
     color: "text-emerald-700",
@@ -47,6 +52,33 @@ const stats = [
 ];
 
 export default function DashboardStats() {
+  const [productCount, setProductCount] = useState(0);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState("");
+
+useEffect(() => {
+  async function fetchProducts() {
+    try {
+      setLoading(true);
+
+      const products = await getMyProducts();
+
+      setProductCount(products.length);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load products"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  fetchProducts();
+}, []);
+
+
   const navigate = useNavigate();
 
   return (
@@ -79,8 +111,14 @@ export default function DashboardStats() {
 
             <div className="mt-2 flex w-full min-w-0 items-center justify-between gap-1 sm:mt-3 sm:gap-2">
               <h3 className="min-w-0 truncate text-sm font-bold tracking-tight text-gray-900 sm:text-xl xl:text-2xl">
-                {stat.value}
-              </h3>
+  {stat.title === "Products"
+    ? loading
+      ? "..."
+      : error
+        ? "!"
+        : productCount
+    : stat.value}
+</h3>
 
               <ArrowUpRight
                 size={17}

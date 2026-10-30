@@ -11,6 +11,7 @@ export default function RecentProducts() {
   const navigate = useNavigate();
   const [products, setProducts] = useState<SellerProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
 useEffect(() => {
   const loadProducts = async () => {
@@ -18,8 +19,13 @@ useEffect(() => {
       const data = await getMyProducts();
       setProducts(data);
     } catch (error) {
-      console.error("Failed to load recent products:", error);
-    } finally {
+  setError(
+    error instanceof Error
+      ? error.message
+      : "Failed to load recent products"
+  );
+}
+    finally {
       setLoading(false);
     }
   };
@@ -72,7 +78,7 @@ const recentProducts = products.slice(0, 5);
       </div>
 
       {/* Loading state */}
-   {loading && (
+   {loading && !error && (
     <div className="px-5 py-12 text-center">
     <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-700" />
 
@@ -81,6 +87,13 @@ const recentProducts = products.slice(0, 5);
     </p>
     </div>
   )}
+
+  {/* Error state */}
+   {!loading && error && (
+  <div className="p-6 text-center text-red-600">
+    {error}
+  </div>
+)}
 
       {/* Product table */}
       {!loading && (<div className="overflow-x-auto">
@@ -182,7 +195,7 @@ const recentProducts = products.slice(0, 5);
       )}
 
       {/* Empty state */}
-      {!loading && products.length === 0 && (
+      {!loading && !error && products.length === 0 && (
         <div className="px-5 py-12 text-center">
           <Package
             size={36}
@@ -202,7 +215,7 @@ const recentProducts = products.slice(0, 5);
       {/* Footer */}
       <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-5 py-4">
         <p className="text-xs text-gray-500">
-          Showing {products.length} products
+            Showing {Math.min(products.length, 5)} of {products.length} products
         </p>
 
         <button

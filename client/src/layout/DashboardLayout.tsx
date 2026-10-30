@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Menu } from "lucide-react";
 
 import Sidebar, {
@@ -20,12 +20,27 @@ export default function DashboardLayout({
   userEmail,
 }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const pageTitles: Record<string, string> = {
+  "/buyer/dashboard": "Dashboard",
+  "/buyer/orders": "My Orders",
+  "/buyer/favorites": "Favorites",
+  "/buyer/settings": "Settings",
+
+  "/seller/dashboard": "Dashboard",
+  "/seller/products": "My Products",
+  "/seller/products/add": "Add Product",
+};
+
+const pageTitle = pageTitles[location.pathname] || "Dashboard";
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
 
-    window.location.href = "/";
+    navigate("/", { replace: true });
   };
 
   return (
@@ -61,7 +76,7 @@ export default function DashboardLayout({
             </p>
 
             <h2 className="text-base font-semibold text-gray-900 sm:text-lg">
-              Dashboard
+               {pageTitle}
             </h2>
           </div>
 
