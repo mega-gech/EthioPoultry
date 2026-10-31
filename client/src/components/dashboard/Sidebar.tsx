@@ -89,7 +89,7 @@ export default function Sidebar({
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.to.endsWith("/dashboard")}
+                end
                 onClick={onClose}
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition ${

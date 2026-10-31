@@ -1,23 +1,14 @@
-import { NavLink, Link } from "react-router-dom";
+import {  Link } from "react-router-dom";
 import {
-  LayoutDashboard,
-  UserRound,
   ShoppingBag,
   Heart,
-  Settings,
-  LogOut,
   Package,
   Clock,
   CheckCircle,
   ArrowRight,
 } from "lucide-react";
 
-const menuItems = [
-  { label: "Dashboard", to: "/buyer/dashboard", icon: LayoutDashboard },
-  { label: "My Orders", to: "/buyer/orders", icon: ShoppingBag },
-  { label: "Favorites", to: "/buyer/favorites", icon: Heart },
-  { label: "Settings", to: "/buyer/settings", icon: Settings },
-];
+
 
 // Sample orders for frontend development.
 // Later, load these from the backend.
@@ -91,65 +82,10 @@ export default function BuyerDashboard() {
   return (
     <div className="min-h-screen bg-white px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="grid lg:grid-cols-[260px_minmax(0,1fr)]">
-          {/* Sidebar */}
-          <aside className="flex flex-col border-b border-slate-200 p-5 lg:border-b-0 lg:border-r">
-            <Link to="/" className="mb-8 flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-700 text-lg">
-                🐔
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  EthioPoultry
-                </p>
-                <p className="text-xs text-slate-500">Poultry Marketplace</p>
-              </div>
-            </Link>
+        <div>
+      
 
-            <nav className="space-y-1" aria-label="Buyer navigation">
-              {menuItems.map(({ label, to, icon: Icon }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                      isActive
-                        ? "bg-emerald-50 font-medium text-emerald-800"
-                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                    }`
-                  }
-                >
-                  <Icon size={18} />
-                  <span>{label}</span>
-                </NavLink>
-              ))}
-            </nav>
-
-            {/* Bottom: user + logout */}
-            <div className="mt-8 border-t border-slate-100 pt-5 lg:mt-auto">
-              <div className="mb-3 flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
-                  M
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-slate-900">
-                    Megabi Getaneh
-                  </p>
-                  <p className="truncate text-xs text-slate-500">
-                    megabi@example.com
-                  </p>
-                </div>
-              </div>
-
-              <Link
-                to="/login"
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition-colors hover:bg-red-50 hover:text-red-700"
-              >
-                <LogOut size={18} />
-                Logout
-              </Link>
-            </div>
-          </aside>
+          
 
           {/* Dashboard content */}
           <main className="min-w-0 space-y-6 bg-slate-50/60 p-4 sm:p-6 lg:p-8">

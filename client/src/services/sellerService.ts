@@ -71,6 +71,27 @@ export interface MarketplaceStatistics {
   coveredLocations: number;
 }
 
+export interface SellerOrderStats {
+  orderCount: number;
+  totalSales: number;
+}
+
+export async function getSellerOrderStats(): Promise<SellerOrderStats> {
+  const response = await fetch(`${API_URL}/seller-order-stats`, {
+    headers: getAuthHeaders(),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(
+      result.message || "Failed to fetch seller order statistics"
+    );
+  }
+
+  return result.data;
+}
+
 export async function getSellerProfile(
     sellerId:string):Promise<SellerProfileResponse["data"]>{
         const response = await fetch(`${API_URL}/sellers/${sellerId}`);

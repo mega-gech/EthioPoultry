@@ -1,136 +1,152 @@
+
 import {
   Package,
   Banknote,
-  MessageCircle,
   ShoppingBag,
-  ArrowUpRight,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+
 import { useEffect, useState } from "react";
-import { getMyProducts } from "../../services/sellerService";
 
-
-
+import {
+  getMyProducts,
+  getSellerOrderStats,
+} from "../../services/sellerService";
 
 const stats = [
   {
     title: "Products",
-    value: "0",
     description: "Listed products",
     icon: Package,
     color: "text-emerald-700",
     bgColor: "bg-emerald-50",
-    path: "/seller/products",
   },
   {
     title: "Sales",
-    value: "ETB 1,240",
-    description: "Total sales",
+    description: "Total completed sales",
     icon: Banknote,
     color: "text-blue-700",
     bgColor: "bg-blue-50",
-    path: "/seller/sales",
-  },
-  {
-    title: "Messages",
-    value: "16",
-    description: "Total messages",
-    icon: MessageCircle,
-    color: "text-purple-700",
-    bgColor: "bg-purple-50",
-    path: "/seller/messages",
   },
   {
     title: "Orders",
-    value: "32",
-    description: "Total orders",
+    description: "Non-cancelled orders",
     icon: ShoppingBag,
     color: "text-amber-700",
     bgColor: "bg-amber-50",
-    path: "/seller/orders",
   },
 ];
 
 export default function DashboardStats() {
   const [productCount, setProductCount] = useState(0);
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-useEffect(() => {
-  async function fetchProducts() {
-    try {
-      setLoading(true);
+  const [orderCount, setOrderCount] = useState(0);
+  const [totalSales, setTotalSales] = useState(0);
+  const [orderStatsLoading, setOrderStatsLoading] = useState(true);
+  const [orderStatsError, setOrderStatsError] = useState("");
 
-      const products = await getMyProducts();
+  // Fetch seller products
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        setLoading(true);
 
-      setProductCount(products.length);
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load products"
-      );
-    } finally {
-      setLoading(false);
+        const products = await getMyProducts();
+
+        setProductCount(products.length);
+      } catch (error) {
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load products"
+        );
+      } finally {
+        setLoading(false);
+      }
     }
-  }
 
-  fetchProducts();
-}, []);
+    fetchProducts();
+  }, []);
 
+  // Fetch seller order statistics
+  useEffect(() => {
+    async function fetchOrderStats() {
+      try {
+        setOrderStatsLoading(true);
 
-  const navigate = useNavigate();
+        const data = await getSellerOrderStats();
+
+        setOrderCount(data.orderCount);
+        setTotalSales(data.totalSales);
+      } catch (error) {
+        setOrderStatsError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load order statistics"
+        );
+      } finally {
+        setOrderStatsLoading(false);
+      }
+    }
+
+    fetchOrderStats();
+  }, []);
 
   return (
     <section
       aria-label="Seller business statistics"
-      className="grid grid-cols-4 gap-2 sm:gap-3"
+      className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4"
     >
       {stats.map((stat) => {
         const Icon = stat.icon;
 
+        let value: string | number;
+
+        if (stat.title === "Products") {
+          value = loading ? "..." : error ? "!" : productCount;
+        } else if (stat.title === "Orders") {
+          value = orderStatsLoading
+            ? "..."
+            : orderStatsError
+              ? "!"
+              : orderCount;
+        } else {
+          value = orderStatsLoading
+            ? "..."
+            : orderStatsError
+              ? "!"
+              : `ETB ${totalSales.toLocaleString()}`;
+        }
+
         return (
-          <button
+          <div
             key={stat.title}
-            type="button"
-            onClick={() => navigate(stat.path)}
-            className="group flex min-w-0 flex-col rounded-xl border border-gray-200 bg-white p-2.5 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 sm:p-4"
-            aria-label={`View ${stat.title.toLowerCase()}: ${stat.value}`}
+            className="flex min-w-0 flex-col rounded-xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4"
           >
             <div className="flex w-full items-center justify-between gap-2">
-              <p className="truncate text-[11px] font-medium text-gray-500 sm:text-sm">
+              <p className="truncate text-xs font-medium text-gray-500 sm:text-sm">
                 {stat.title}
               </p>
 
               <div
-                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md sm:h-9 sm:w-9 sm:rounded-lg ${stat.bgColor} ${stat.color}`}
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 ${stat.bgColor} ${stat.color}`}
               >
-                <Icon className="h-3.5 w-3.5 sm:h-[19px] sm:w-[19px]" strokeWidth={1.8} />
+                <Icon
+                  className="h-4 w-4 sm:h-5 sm:w-5"
+                  strokeWidth={1.8}
+                />
               </div>
             </div>
 
-            <div className="mt-2 flex w-full min-w-0 items-center justify-between gap-1 sm:mt-3 sm:gap-2">
-              <h3 className="min-w-0 truncate text-sm font-bold tracking-tight text-gray-900 sm:text-xl xl:text-2xl">
-  {stat.title === "Products"
-    ? loading
-      ? "..."
-      : error
-        ? "!"
-        : productCount
-    : stat.value}
-</h3>
+            <h3 className="mt-3 truncate text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
+              {value}
+            </h3>
 
-              <ArrowUpRight
-                size={17}
-                className="hidden shrink-0 text-gray-300 transition group-hover:text-emerald-600 sm:block"
-                aria-hidden="true"
-              />
-            </div>
-
-            <p className="mt-0.5 hidden truncate text-xs text-gray-500 sm:mt-1 sm:block">
+            <p className="mt-1 truncate text-xs text-gray-500">
               {stat.description}
             </p>
-          </button>
+          </div>
         );
       })}
     </section>
