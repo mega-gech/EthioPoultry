@@ -21,9 +21,7 @@ app.use("/api/auth", authRoutes)
 app.use("/api/statistics", statisticsRoutes);
 app.use("/api/market-prices", marketPriceRoutes);
 app.use("/api/seller-order-stats", sellerOrderStatsRoutes);
-app.use("/api/buyer-order-stats", buyerOrderStatusRoutes);
-
-
+app.use("/api/orders", buyerOrderStatusRoutes);
 
 const port = process.env.PORT
 
