@@ -79,7 +79,7 @@ export const createBuyerOrder = async (
     res.status(201).json({
       success: true,
       message: "Order placed successfully",
-      data: order,
+      data: order, 
     });
   } catch (error) {
     console.error("create buyer order error:", error);
@@ -87,6 +87,45 @@ export const createBuyerOrder = async (
     res.status(500).json({
       success: false,
       message: "Failed to place order",
+    });
+  }
+};
+
+
+export const getBuyerOrders = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+
+    // Only authenticated buyers can view their orders
+    if (!userId || req.user?.role !== "buyer") {
+      res.status(403).json({
+        success: false,
+        message: "Only buyers can access their orders",
+      });
+      return;
+    }
+
+    // Find orders belonging to this buyer
+    const orders = await Order.find({
+      buyerId: userId,
+    })
+      .populate("sellerId", "name phone location")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: orders.length,
+      data: orders,
+    });
+  } catch (error) {
+    console.error("get buyer orders error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch buyer orders",
     });
   }
 };
