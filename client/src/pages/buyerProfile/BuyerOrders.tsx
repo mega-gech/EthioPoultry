@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Package,
@@ -14,35 +15,14 @@ import {
 
 import {
   getBuyerOrders,
+  cancelBuyerOrder,
   type BuyerOrder,
   type OrderItem,
   type OrderStatus,
   type Seller,
 } from "../../services/buyerOrderService";
 
-
-type Order = {
-  _id: string;
-  buyerId: string;
-  sellerId: Seller | string;
-  items: OrderItem[];
-  totalAmount: number;
-  status: OrderStatus;
-  createdAt: string;
-  updatedAt?: string;
-};
-
-type ApiResponse<T> = {
-  success: boolean;
-  data: T;
-  message?: string;
-};
-
-const API_URL = "http://localhost:5000/api";
-
-// These endpoints must be implemented in your Express backend.
-
-
+// Order status filters
 const filters = [
   "All",
   "Pending",
@@ -53,18 +33,27 @@ const filters = [
 
 type OrderFilter = (typeof filters)[number];
 
+// Format Ethiopian Birr
 function formatPrice(price: number) {
   return `${price.toLocaleString("en-US")} ETB`;
 }
 
+// Format order date
 function formatDate(date: string) {
-  return new Date(date).toLocaleDateString("en-GB", {
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Date unavailable";
+  }
+
+  return parsedDate.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
 }
 
+// Get seller name from populated seller information
 function getSellerName(seller: Seller | string) {
   if (typeof seller === "object" && seller !== null) {
     return seller.name;
@@ -73,14 +62,17 @@ function getSellerName(seller: Seller | string) {
   return "Seller";
 }
 
+// Get product names
 function getOrderProducts(items: OrderItem[]) {
   return items.map((item) => item.name).join(", ");
 }
 
+// Calculate total ordered quantity
 function getOrderQuantity(items: OrderItem[]) {
   return items.reduce((total, item) => total + item.quantity, 0);
 }
 
+// Status badge styles
 function statusStyle(status: OrderStatus) {
   switch (status) {
     case "Pending":
@@ -98,9 +90,9 @@ function statusStyle(status: OrderStatus) {
 }
 
 export default function BuyerOrders() {
-
   const [orders, setOrders] = useState<BuyerOrder[]>([]);
-  const [selectedOrder, setSelectedOrder] = useState<BuyerOrder | null>(null);
+  const [selectedOrder, setSelectedOrder] =
+    useState<BuyerOrder | null>(null);
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<OrderFilter>("All");
@@ -108,47 +100,77 @@ export default function BuyerOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-
-  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(
+    null
+  );
 
   const [cancelling, setCancelling] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageIsError, setMessageIsError] = useState(false);
 
-  // Get the authentication token saved after buyer login.
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem("token");
+  // Fetch orders belonging to the logged-in buyer
+  const fetchOrders = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-    return {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    };
-  };
+      const data = await getBuyerOrders();
 
-  // Load orders belonging to the authenticated buyer.
-const fetchOrders = async () => {
-  try {
-    setLoading(true);
-    setError("");
-
-    const data = await getBuyerOrders();
-
-    setOrders(data);
-  } catch (err) {
-    setError(
-      err instanceof Error
-        ? err.message
-        : "Something went wrong while loading orders."
-    );
-  } finally {
-    setLoading(false);
-  }
-};
-
-  useEffect(() => {
-    fetchOrders();
+      setOrders(data);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while loading orders."
+      );
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // Search and filter orders.
+  useEffect(() => {
+    void fetchOrders();
+  }, [fetchOrders]);
+
+  // Cancel a pending order
+  const cancelOrder = async () => {
+    if (!cancelOrderId) return;
+
+    try {
+      setCancelling(true);
+      setMessage("");
+      setMessageIsError(false);
+
+      const updatedOrder = await cancelBuyerOrder(cancelOrderId);
+
+      // Update the order without deleting it
+      setOrders((previousOrders) =>
+        previousOrders.map((order) =>
+          order._id === cancelOrderId ? updatedOrder : order
+        )
+      );
+
+      setMessage("Your order was successfully cancelled.");
+      setCancelOrderId(null);
+
+      // Update the details modal if it is open
+      if (selectedOrder?._id === cancelOrderId) {
+        setSelectedOrder(updatedOrder);
+      }
+    } catch (err) {
+      setMessageIsError(true);
+
+      setMessage(
+        err instanceof Error
+          ? err.message
+          : "Failed to cancel the order."
+      );
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  // Search and filter orders
   const filteredOrders = useMemo(() => {
     const query = search.trim().toLowerCase();
 
@@ -165,9 +187,15 @@ const fetchOrders = async () => {
     });
   }, [orders, search, filter]);
 
-  // Calculate summary cards using real order data.
+  // Calculate dashboard statistics from real orders
+  const totalOrders = orders.length;
+
   const pendingCount = orders.filter(
     (order) => order.status === "Pending"
+  ).length;
+
+  const cancelledCount = orders.filter(
+    (order) => order.status === "Cancelled"
   ).length;
 
   const completedCount = orders.filter(
@@ -178,61 +206,13 @@ const fetchOrders = async () => {
     .filter((order) => order.status === "Completed")
     .reduce((sum, order) => sum + order.totalAmount, 0);
 
-  // Cancel a pending order through the backend.
-  const cancelOrder = async () => {
-    if (!cancelOrderId) return;
-
-    try {
-      setCancelling(true);
-      setMessage("");
-
-      const response = await fetch(
-        `${API_URL}/orders/${cancelOrderId}/cancel`,
-        {
-          method: "PATCH",
-          headers: getAuthHeaders(),
-        }
-      );
-
-      const result: ApiResponse<Order> = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(
-          result.message || "Unable to cancel this order."
-        );
-      }
-
-      // Update the order using the backend response.
-      setOrders((previousOrders) =>
-        previousOrders.map((order) =>
-          order._id === cancelOrderId ? result.data : order
-        )
-      );
-
-      setMessage("Your order was successfully cancelled.");
-      setCancelOrderId(null);
-
-      if (selectedOrder?._id === cancelOrderId) {
-        setSelectedOrder(result.data);
-      }
-    } catch (err) {
-      setMessage(
-        err instanceof Error
-          ? err.message
-          : "Failed to cancel the order."
-      );
-    } finally {
-      setCancelling(false);
-    }
-  };
-
   return (
     <main className="min-w-0 space-y-6 bg-slate-50/60 p-4 sm:p-6 lg:p-8">
 
       {/* Page heading */}
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             My Orders
           </h1>
 
@@ -257,7 +237,7 @@ const fetchOrders = async () => {
 
           <button
             type="button"
-            onClick={fetchOrders}
+            onClick={() => void fetchOrders()}
             className="inline-flex items-center gap-2 font-semibold hover:underline"
           >
             <RefreshCw size={15} />
@@ -266,29 +246,44 @@ const fetchOrders = async () => {
         </div>
       )}
 
-      {/* Summary cards */}
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {/* Dashboard summary cards */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+
         <SummaryCard
           label="Total Orders"
-          value={loading ? "—" : String(orders.length)}
+          value={loading ? "—" : String(totalOrders)}
+          description="All your purchases"
           icon={<Package size={21} />}
+          iconStyle="bg-green-50 text-green-800"
         />
 
         <SummaryCard
           label="Pending Orders"
           value={loading ? "—" : String(pendingCount)}
+          description="Waiting for seller action"
           icon={<ShoppingBag size={21} />}
+          iconStyle="bg-amber-50 text-amber-700"
+        />
+
+        <SummaryCard
+          label="Cancelled Orders"
+          value={loading ? "—" : String(cancelledCount)}
+          description="Orders you have cancelled"
+          icon={<XCircle size={21} />}
+          iconStyle="bg-red-50 text-red-700"
         />
 
         <SummaryCard
           label="Completed Spending"
           value={loading ? "—" : formatPrice(totalSpent)}
+          description={`${completedCount} completed order(s)`}
           icon={<Banknote size={21} />}
+          iconStyle="bg-blue-50 text-blue-700"
         />
       </section>
 
       {/* Order history */}
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
         {/* Search and filters */}
         <div className="border-b border-slate-100 p-5 sm:p-6">
@@ -299,13 +294,13 @@ const fetchOrders = async () => {
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                {completedCount} completed order(s)
+                {completedCount} completed · {cancelledCount} cancelled
               </p>
             </div>
 
             <button
               type="button"
-              onClick={fetchOrders}
+              onClick={() => void fetchOrders()}
               disabled={loading}
               className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
             >
@@ -318,7 +313,7 @@ const fetchOrders = async () => {
           </div>
 
           {/* Search */}
-          <div className="mt-5 flex items-center gap-3 rounded-lg border border-slate-200 px-3 transition focus-within:border-green-600">
+          <div className="mt-5 flex items-center gap-3 rounded-lg border border-slate-200 px-3 transition focus-within:border-green-600 focus-within:ring-2 focus-within:ring-green-100">
             <Search size={19} className="shrink-0 text-slate-400" />
 
             <input
@@ -339,21 +334,30 @@ const fetchOrders = async () => {
                 onClick={() => setFilter(item)}
                 className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
                   filter === item
-                    ? "bg-green-700 text-white"
+                    ? "bg-green-700 text-white shadow-sm"
                     : "bg-slate-100 text-slate-600 hover:bg-green-50 hover:text-green-800"
                 }`}
               >
                 {item}
+                {item === "Cancelled" && !loading && (
+                  <span className="ml-1.5">
+                    ({cancelledCount})
+                  </span>
+                )}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Success or cancellation message */}
+        {/* Success or error message */}
         {message && (
           <div
             role="status"
-            className="mx-5 mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800 sm:mx-6"
+            className={`mx-5 mt-4 rounded-lg px-4 py-3 text-sm sm:mx-6 ${
+              messageIsError
+                ? "bg-red-50 text-red-800"
+                : "bg-green-50 text-green-800"
+            }`}
           >
             {message}
 
@@ -367,7 +371,7 @@ const fetchOrders = async () => {
           </div>
         )}
 
-        {/* Loading */}
+        {/* Loading state */}
         {loading ? (
           <div className="flex flex-col items-center justify-center px-5 py-20 text-slate-500">
             <LoaderCircle
@@ -423,7 +427,7 @@ const fetchOrders = async () => {
           </div>
         ) : (
 
-          /* Orders */
+          /* Orders list */
           <div className="divide-y divide-slate-100">
             {filteredOrders.map((order) => (
               <article
@@ -519,7 +523,7 @@ const fetchOrders = async () => {
             role="dialog"
             aria-modal="true"
             aria-labelledby="order-modal-title"
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-5 flex items-center justify-between">
@@ -610,7 +614,7 @@ const fetchOrders = async () => {
         </div>
       )}
 
-      {/* Cancellation confirmation */}
+      {/* Cancellation confirmation modal */}
       {cancelOrderId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <section
@@ -661,34 +665,44 @@ const fetchOrders = async () => {
   );
 }
 
-// Summary card
+// Reusable summary card
 function SummaryCard({
   label,
   value,
+  description,
   icon,
+  iconStyle,
 }: {
   label: string;
   value: string;
+  description: string;
   icon: React.ReactNode;
+  iconStyle: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <p className="text-sm text-slate-500">{label}</p>
+        <p className="text-sm font-medium text-slate-500">
+          {label}
+        </p>
 
-        <div className="rounded-lg bg-green-50 p-2 text-green-800">
+        <div className={`rounded-lg p-2 ${iconStyle}`}>
           {icon}
         </div>
       </div>
 
-      <p className="break-words text-2xl font-bold text-slate-800">
+      <p className="break-words text-2xl font-bold tracking-tight text-slate-900">
         {value}
+      </p>
+
+      <p className="mt-2 text-xs text-slate-500">
+        {description}
       </p>
     </div>
   );
 }
 
-// Modal detail row
+// Reusable modal detail row
 function DetailRow({
   label,
   value,

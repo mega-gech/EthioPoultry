@@ -62,3 +62,37 @@ export const getBuyerOrders = async (): Promise<BuyerOrder[]> => {
 
   return result.data;
 };
+
+
+export const cancelBuyerOrder = async (
+  orderId: string
+): Promise<BuyerOrder> => {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    throw new Error("Please log in to cancel your order.");
+  }
+
+  const response = await fetch(
+    `${API_URL}/orders/${orderId}/cancel`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  const result: {
+    success: boolean;
+    data: BuyerOrder;
+    message?: string;
+  } = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Failed to cancel order.");
+  }
+
+  return result.data;
+};
