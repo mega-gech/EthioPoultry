@@ -76,6 +76,32 @@ export interface SellerOrderStats {
   totalSales: number;
 }
 
+export interface BuyerOrderStats {
+  totalOrders: number;
+  pendingOrders: number;
+  completedOrders: number;
+}
+
+export async function getBuyerOrderStats(): Promise<BuyerOrderStats> {
+  const response = await fetch(`${API_URL}/buyer-order-stats`, {
+    headers: getAuthHeaders(),
+  });
+
+  const result: {
+    success: boolean;
+    data: BuyerOrderStats;
+    message?: string;
+  } = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(
+      result.message || "Failed to fetch buyer order statistics"
+    );
+  }
+
+  return result.data;
+}
+
 export async function getSellerOrderStats(): Promise<SellerOrderStats> {
   const response = await fetch(`${API_URL}/seller-order-stats`, {
     headers: getAuthHeaders(),

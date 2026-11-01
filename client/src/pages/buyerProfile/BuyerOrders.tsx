@@ -1,82 +1,62 @@
-
-import { useMemo, useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  LayoutDashboard,
-  UserRound,
-  ShoppingBag,
-  Heart,
-  Settings,
-  LogOut,
-  Search,
   Package,
+  ShoppingBag,
+  Banknote,
+  Search,
   Eye,
   XCircle,
   ArrowRight,
+  LoaderCircle,
+  RefreshCw,
 } from "lucide-react";
 
+// Order statuses must match your backend Order model.
 type OrderStatus =
   | "Pending"
-  | "Processing"
+  | "Confirmed"
   | "Completed"
   | "Cancelled";
 
-type Order = {
-  id: string;
-  product: string;
-  seller: string;
-  date: string;
+type OrderItem = {
+  productId: string;
+  name: string;
+  price: number;
   quantity: number;
-  unit: string;
-  total: number;
-  status: OrderStatus;
 };
 
-const initialOrders: Order[] = [
-  {
-    id: "EP-1001",
-    product: "Fresh Eggs (30 pcs)",
-    seller: "Abebe Poultry Farm",
-    date: "2026-10-12",
-    quantity: 2,
-    unit: "trays",
-    total: 480,
-    status: "Completed",
-  },
-  {
-    id: "EP-1002",
-    product: "Brown Layer Chicken",
-    seller: "Abebe Poultry Farm",
-    date: "2026-10-13",
-    quantity: 1,
-    unit: "chicken",
-    total: 850,
-    status: "Pending",
-  },
-  {
-    id: "EP-1003",
-    product: "Fresh Eggs (30 pcs)",
-    seller: "Gojjam Poultry",
-    date: "2026-10-13",
-    quantity: 1,
-    unit: "tray",
-    total: 240,
-    status: "Processing",
-  },
-];
+type Seller = {
+  _id: string;
+  name: string;
+};
 
-const menuItems = [
-  { label: "Dashboard", to: "/buyer/dashboard", icon: LayoutDashboard },
-  { label: "My Profile", to: "/buyer/profile", icon: UserRound },
-  { label: "My Orders", to: "/buyer/orders", icon: ShoppingBag },
-  { label: "Favorites", to: "/buyer/favorites", icon: Heart },
-  { label: "Settings", to: "/buyer/settings", icon: Settings },
-];
+type Order = {
+  _id: string;
+  buyerId: string;
+  sellerId: Seller | string;
+  items: OrderItem[];
+  totalAmount: number;
+  status: OrderStatus;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+type ApiResponse<T> = {
+  success: boolean;
+  data: T;
+  message?: string;
+};
+
+const API_URL = "http://localhost:5000/api";
+
+// These endpoints must be implemented in your Express backend.
+const ORDERS_ENDPOINT = `${API_URL}/orders/my-orders`;
 
 const filters = [
   "All",
   "Pending",
-  "Processing",
+  "Confirmed",
   "Completed",
   "Cancelled",
 ] as const;
@@ -84,46 +64,124 @@ const filters = [
 type OrderFilter = (typeof filters)[number];
 
 function formatPrice(price: number) {
-  return `${price.toLocaleString()} ETB`;
+  return `${price.toLocaleString("en-US")} ETB`;
 }
 
 function formatDate(date: string) {
-  return new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", {
+  return new Date(date).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
 }
 
+function getSellerName(seller: Seller | string) {
+  if (typeof seller === "object" && seller !== null) {
+    return seller.name;
+  }
+
+  return "Seller";
+}
+
+function getOrderProducts(items: OrderItem[]) {
+  return items.map((item) => item.name).join(", ");
+}
+
+function getOrderQuantity(items: OrderItem[]) {
+  return items.reduce((total, item) => total + item.quantity, 0);
+}
+
 function statusStyle(status: OrderStatus) {
   switch (status) {
     case "Pending":
-      return "bg-amber-100 text-amber-800";
-    case "Processing":
-      return "bg-blue-100 text-blue-800";
+      return "bg-amber-50 text-amber-700";
+
+    case "Confirmed":
+      return "bg-blue-50 text-blue-700";
+
     case "Completed":
-      return "bg-green-100 text-green-800";
+      return "bg-green-50 text-green-700";
+
     case "Cancelled":
-      return "bg-red-100 text-red-800";
+      return "bg-red-50 text-red-700";
   }
 }
 
 export default function BuyerOrders() {
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
+
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<OrderFilter>("All");
-  const [message, setMessage] = useState("");
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
 
+  const [cancelling, setCancelling] = useState(false);
+  const [message, setMessage] = useState("");
+
+  // Get the authentication token saved after buyer login.
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  };
+
+  // Load orders belonging to the authenticated buyer.
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        throw new Error("Please log in to view your orders.");
+      }
+
+      const response = await fetch(ORDERS_ENDPOINT, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+
+      const result: ApiResponse<Order[]> = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to load your orders."
+        );
+      }
+
+      setOrders(result.data);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while loading orders."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  // Search and filter orders.
   const filteredOrders = useMemo(() => {
     const query = search.trim().toLowerCase();
 
     return orders.filter((order) => {
       const matchesSearch =
-        order.id.toLowerCase().includes(query) ||
-        order.product.toLowerCase().includes(query) ||
-        order.seller.toLowerCase().includes(query);
+        order._id.toLowerCase().includes(query) ||
+        getOrderProducts(order.items).toLowerCase().includes(query) ||
+        getSellerName(order.sellerId).toLowerCase().includes(query);
 
       const matchesFilter =
         filter === "All" || order.status === filter;
@@ -132,28 +190,7 @@ export default function BuyerOrders() {
     });
   }, [orders, search, filter]);
 
-  const cancelOrder = () => {
-    if (!cancelOrderId) return;
-
-    const order = orders.find((item) => item.id === cancelOrderId);
-
-    if (!order || order.status !== "Pending") {
-      setCancelOrderId(null);
-      return;
-    }
-
-    setOrders((previous) =>
-      previous.map((item) =>
-        item.id === cancelOrderId
-          ? { ...item, status: "Cancelled" }
-          : item
-      )
-    );
-
-    setMessage(`${cancelOrderId} was cancelled in this demo.`);
-    setCancelOrderId(null);
-  };
-
+  // Calculate summary cards using real order data.
   const pendingCount = orders.filter(
     (order) => order.status === "Pending"
   ).length;
@@ -164,274 +201,338 @@ export default function BuyerOrders() {
 
   const totalSpent = orders
     .filter((order) => order.status === "Completed")
-    .reduce((sum, order) => sum + order.total, 0);
+    .reduce((sum, order) => sum + order.totalAmount, 0);
+
+  // Cancel a pending order through the backend.
+  const cancelOrder = async () => {
+    if (!cancelOrderId) return;
+
+    try {
+      setCancelling(true);
+      setMessage("");
+
+      const response = await fetch(
+        `${API_URL}/orders/${cancelOrderId}/cancel`,
+        {
+          method: "PATCH",
+          headers: getAuthHeaders(),
+        }
+      );
+
+      const result: ApiResponse<Order> = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Unable to cancel this order."
+        );
+      }
+
+      // Update the order using the backend response.
+      setOrders((previousOrders) =>
+        previousOrders.map((order) =>
+          order._id === cancelOrderId ? result.data : order
+        )
+      );
+
+      setMessage("Your order was successfully cancelled.");
+      setCancelOrderId(null);
+
+      if (selectedOrder?._id === cancelOrderId) {
+        setSelectedOrder(result.data);
+      }
+    } catch (err) {
+      setMessage(
+        err instanceof Error
+          ? err.message
+          : "Failed to cancel the order."
+      );
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-white px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-7">
+    <main className="min-w-0 space-y-6 bg-slate-50/60 p-4 sm:p-6 lg:p-8">
+
+      {/* Page heading */}
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div>
           <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
             My Orders
           </h1>
-          <p className="mt-2 text-sm text-gray-500">
-            View your orders and follow their progress.
+
+          <p className="mt-2 text-sm text-slate-500">
+            View your purchases and follow their progress.
           </p>
-        </header>
+        </div>
 
-        <div className="grid overflow-hidden rounded-2xl border border-gray-200 lg:grid-cols-[285px_minmax(0,1fr)]">
-          {/* Buyer sidebar */}
-          <aside className="border-b border-gray-200 p-5 sm:p-6 lg:border-b-0 lg:border-r">
-            <Link to="/" className="mb-9 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-xl">
-                🐔
-              </div>
-              <div>
-                <p className="font-bold text-green-800">EthioPoultry</p>
-                <p className="text-xs text-gray-500">
-                  Poultry Marketplace
-                </p>
-              </div>
-            </Link>
+        <Link
+          to="/products"
+          className="inline-flex items-center gap-2 rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-800"
+        >
+          Shop Products
+          <ArrowRight size={16} />
+        </Link>
+      </header>
 
-            <div className="mb-8 text-center">
-              <div className="mx-auto mb-4 flex h-[88px] w-[88px] items-center justify-center rounded-full bg-green-100 text-3xl font-bold text-green-800">
-                M
-              </div>
-              <h2 className="font-semibold text-gray-900">
-                Megabi Getaneh
+      {/* Error message */}
+      {error && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <p>{error}</p>
+
+          <button
+            type="button"
+            onClick={fetchOrders}
+            className="inline-flex items-center gap-2 font-semibold hover:underline"
+          >
+            <RefreshCw size={15} />
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {/* Summary cards */}
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <SummaryCard
+          label="Total Orders"
+          value={loading ? "—" : String(orders.length)}
+          icon={<Package size={21} />}
+        />
+
+        <SummaryCard
+          label="Pending Orders"
+          value={loading ? "—" : String(pendingCount)}
+          icon={<ShoppingBag size={21} />}
+        />
+
+        <SummaryCard
+          label="Completed Spending"
+          value={loading ? "—" : formatPrice(totalSpent)}
+          icon={<Banknote size={21} />}
+        />
+      </section>
+
+      {/* Order history */}
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+
+        {/* Search and filters */}
+        <div className="border-b border-slate-100 p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">
+                Order History
               </h2>
-              <p className="mt-1 break-all text-sm text-gray-500">
-                megabi@example.com
+
+              <p className="mt-1 text-sm text-slate-500">
+                {completedCount} completed order(s)
               </p>
             </div>
 
-            <nav className="space-y-2" aria-label="Buyer navigation">
-              {menuItems.map(({ label, to, icon: Icon }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-lg border-l-4 px-3 py-3 text-sm transition ${
-                      isActive
-                        ? "border-green-700 bg-green-50 font-semibold text-green-800"
-                        : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-green-800"
-                    }`
-                  }
-                >
-                  <Icon size={21} />
-                  {label}
-                </NavLink>
-              ))}
+            <button
+              type="button"
+              onClick={fetchOrders}
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+            >
+              <RefreshCw
+                size={16}
+                className={loading ? "animate-spin" : ""}
+              />
+              Refresh
+            </button>
+          </div>
 
-              <Link
-                to="/login"
-                className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-gray-600 hover:bg-red-50 hover:text-red-700"
+          {/* Search */}
+          <div className="mt-5 flex items-center gap-3 rounded-lg border border-slate-200 px-3 transition focus-within:border-green-600">
+            <Search size={19} className="shrink-0 text-slate-400" />
+
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by order ID, product, or seller..."
+              className="min-w-0 flex-1 border-0 bg-transparent py-3 text-sm outline-none"
+            />
+          </div>
+
+          {/* Status filters */}
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+            {filters.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setFilter(item)}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
+                  filter === item
+                    ? "bg-green-700 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-green-50 hover:text-green-800"
+                }`}
               >
-                <LogOut size={21} />
-                Logout
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Success or cancellation message */}
+        {message && (
+          <div
+            role="status"
+            className="mx-5 mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800 sm:mx-6"
+          >
+            {message}
+
+            <button
+              type="button"
+              onClick={() => setMessage("")}
+              className="ml-3 font-semibold underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center px-5 py-20 text-slate-500">
+            <LoaderCircle
+              size={36}
+              className="mb-4 animate-spin text-green-700"
+            />
+
+            <p className="text-sm font-medium">
+              Loading your orders...
+            </p>
+          </div>
+        ) : filteredOrders.length === 0 ? (
+
+          /* Empty state */
+          <div className="px-5 py-16 text-center">
+            <Package
+              size={42}
+              className="mx-auto mb-4 text-slate-300"
+            />
+
+            <h3 className="font-semibold text-slate-800">
+              {orders.length === 0
+                ? "You haven't placed any orders yet"
+                : "No orders found"}
+            </h3>
+
+            <p className="mt-2 text-sm text-slate-500">
+              {orders.length === 0
+                ? "Browse products and place your first order."
+                : "Try another search or status filter."}
+            </p>
+
+            {orders.length === 0 ? (
+              <Link
+                to="/products"
+                className="mt-5 inline-flex items-center gap-2 rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800"
+              >
+                Browse Products
+                <ArrowRight size={16} />
               </Link>
-            </nav>
-          </aside>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setFilter("All");
+                }}
+                className="mt-4 text-sm font-semibold text-green-800 hover:underline"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        ) : (
 
-          {/* Main orders area */}
-          <main className="min-w-0 bg-gray-50/50 p-4 sm:p-6 lg:p-8">
-            {/* Summary cards */}
-            <section className="mb-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <SummaryCard
-                label="Total Orders"
-                value={String(orders.length)}
-                icon={<Package size={21} />}
-              />
-              <SummaryCard
-                label="Pending Orders"
-                value={String(pendingCount)}
-                icon={<ShoppingBag size={21} />}
-              />
-              <SummaryCard
-                label="Completed Spending"
-                value={formatPrice(totalSpent)}
-                icon={<Heart size={21} />}
-              />
-            </section>
-
-            {/* Orders list */}
-            <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-              <div className="border-b border-gray-100 p-5 sm:p-6">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+          /* Orders */
+          <div className="divide-y divide-slate-100">
+            {filteredOrders.map((order) => (
+              <article
+                key={order._id}
+                className="p-5 transition hover:bg-slate-50/70 sm:p-6"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-800">
-                      Order History
-                    </h2>
-                    <p className="mt-1 text-sm text-gray-500">
-                      {completedCount} completed order(s)
+                    <p className="text-sm font-semibold text-green-800">
+                      Order #{order._id.slice(-8).toUpperCase()}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      Placed on {formatDate(order.createdAt)}
                     </p>
                   </div>
-                  <Link
-                    to="/products"
-                    className="inline-flex items-center gap-2 rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-800"
+
+                  <span
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold ${statusStyle(
+                      order.status
+                    )}`}
                   >
-                    Shop Products
-                    <ArrowRight size={16} />
-                  </Link>
+                    {order.status}
+                  </span>
                 </div>
 
-                <div className="mt-5">
-                  <label htmlFor="order-search" className="sr-only">
-                    Search orders
-                  </label>
-                  <div className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 focus-within:border-green-600">
-                    <Search size={19} className="shrink-0 text-gray-400" />
-                    <input
-                      id="order-search"
-                      type="search"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search by order ID, product, or seller..."
-                      className="min-w-0 flex-1 border-0 py-3 text-sm outline-none"
-                    />
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-slate-800">
+                      {getOrderProducts(order.items)}
+                    </h3>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Seller: {getSellerName(order.sellerId)}
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Quantity: {getOrderQuantity(order.items)} item(s)
+                    </p>
+                  </div>
+
+                  <div className="text-left sm:text-right">
+                    <p className="text-xs text-slate-500">
+                      Order total
+                    </p>
+
+                    <p className="mt-1 text-lg font-bold text-slate-900">
+                      {formatPrice(order.totalAmount)}
+                    </p>
                   </div>
                 </div>
 
-                <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-                  {filters.map((item) => (
+                <div className="mt-5 flex flex-wrap gap-3 border-t border-slate-100 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOrder(order)}
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-green-300 hover:bg-green-50"
+                  >
+                    <Eye size={16} />
+                    View Details
+                  </button>
+
+                  {order.status === "Pending" && (
                     <button
-                      key={item}
                       type="button"
-                      onClick={() => setFilter(item)}
-                      className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
-                        filter === item
-                          ? "bg-green-700 text-white"
-                          : "bg-gray-100 text-gray-600 hover:bg-green-50 hover:text-green-800"
-                      }`}
+                      onClick={() => setCancelOrderId(order._id)}
+                      className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-50"
                     >
-                      {item}
+                      <XCircle size={16} />
+                      Cancel Order
                     </button>
-                  ))}
+                  )}
                 </div>
-              </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
-              {message && (
-                <div
-                  role="status"
-                  className="mx-5 mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800 sm:mx-6"
-                >
-                  {message}
-                  <button
-                    type="button"
-                    onClick={() => setMessage("")}
-                    className="ml-3 font-semibold underline"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              )}
-
-              {filteredOrders.length === 0 ? (
-                <div className="px-5 py-16 text-center">
-                  <Package
-                    size={42}
-                    className="mx-auto mb-4 text-gray-300"
-                  />
-                  <h3 className="font-semibold text-gray-800">
-                    No orders found
-                  </h3>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Try another search or status filter.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearch("");
-                      setFilter("All");
-                    }}
-                    className="mt-4 text-sm font-semibold text-green-800 hover:underline"
-                  >
-                    Clear filters
-                  </button>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-100">
-                  {filteredOrders.map((order) => (
-                    <article
-                      key={order.id}
-                      className="p-5 transition hover:bg-gray-50/70 sm:p-6"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-green-800">
-                            Order #{order.id}
-                          </p>
-                          <p className="mt-1 text-xs text-gray-500">
-                            Placed on {formatDate(order.date)}
-                          </p>
-                        </div>
-
-                        <span
-                          className={`rounded-full px-3 py-1.5 text-xs font-semibold ${statusStyle(
-                            order.status
-                          )}`}
-                        >
-                          {order.status}
-                        </span>
-                      </div>
-
-                      <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-                        <div className="min-w-0">
-                          <h3 className="font-semibold text-gray-800">
-                            {order.product}
-                          </h3>
-                          <p className="mt-1 text-sm text-gray-500">
-                            Seller: {order.seller}
-                          </p>
-                          <p className="mt-1 text-sm text-gray-500">
-                            Quantity: {order.quantity} {order.unit}
-                          </p>
-                        </div>
-
-                        <div className="text-left sm:text-right">
-                          <p className="text-xs text-gray-500">
-                            Order total
-                          </p>
-                          <p className="mt-1 text-lg font-bold text-slate-800">
-                            {formatPrice(order.total)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-5 flex flex-wrap gap-3 border-t border-gray-100 pt-4">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedOrder(order)}
-                          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:border-green-300 hover:bg-green-50"
-                        >
-                          <Eye size={16} />
-                          View Details
-                        </button>
-
-                        {order.status === "Pending" && (
-                          <button
-                            type="button"
-                            onClick={() => setCancelOrderId(order.id)}
-                            className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
-                          >
-                            <XCircle size={16} />
-                            Cancel Order
-                          </button>
-                        )}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <footer className="py-6 text-center text-sm text-gray-500">
-              © {new Date().getFullYear()} EthioPoultry. Connecting buyers
-              with poultry farmers.
-            </footer>
-          </main>
-        </div>
-      </div>
+      {/* Footer */}
+      <footer className="py-4 text-center text-sm text-slate-500">
+        © {new Date().getFullYear()} EthioPoultry. Connecting buyers
+        with poultry farmers.
+      </footer>
 
       {/* Order details modal */}
       {selectedOrder && (
@@ -453,42 +554,72 @@ export default function BuyerOrders() {
               >
                 Order Details
               </h2>
+
               <button
                 type="button"
                 aria-label="Close order details"
                 onClick={() => setSelectedOrder(null)}
-                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
               >
                 <XCircle size={21} />
               </button>
             </div>
 
             <div className="space-y-4 text-sm">
-              <DetailRow label="Order ID" value={selectedOrder.id} />
               <DetailRow
-                label="Product"
-                value={selectedOrder.product}
+                label="Order ID"
+                value={selectedOrder._id}
               />
+
               <DetailRow
                 label="Seller"
-                value={selectedOrder.seller}
+                value={getSellerName(selectedOrder.sellerId)}
               />
+
               <DetailRow
                 label="Order Date"
-                value={formatDate(selectedOrder.date)}
+                value={formatDate(selectedOrder.createdAt)}
               />
-              <DetailRow
-                label="Quantity"
-                value={`${selectedOrder.quantity} ${selectedOrder.unit}`}
-              />
+
               <DetailRow
                 label="Status"
                 value={selectedOrder.status}
               />
-              <div className="flex justify-between gap-4 border-t border-gray-100 pt-4">
-                <span className="font-semibold text-gray-700">Total</span>
+
+              <div className="border-t border-slate-100 pt-4">
+                <p className="mb-3 font-semibold text-slate-800">
+                  Ordered Products
+                </p>
+
+                {selectedOrder.items.map((item, index) => (
+                  <div
+                    key={`${item.productId}-${index}`}
+                    className="mb-3 flex justify-between gap-4"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-800">
+                        {item.name}
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-500">
+                        {item.quantity} × {formatPrice(item.price)}
+                      </p>
+                    </div>
+
+                    <p className="font-medium text-slate-800">
+                      {formatPrice(item.price * item.quantity)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-between gap-4 border-t border-slate-100 pt-4">
+                <span className="font-semibold text-slate-700">
+                  Total
+                </span>
+
                 <span className="font-bold text-green-800">
-                  {formatPrice(selectedOrder.total)}
+                  {formatPrice(selectedOrder.totalAmount)}
                 </span>
               </div>
             </div>
@@ -516,39 +647,46 @@ export default function BuyerOrders() {
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600">
               <XCircle size={25} />
             </div>
+
             <h2
               id="cancel-modal-title"
               className="text-lg font-bold text-slate-800"
             >
               Cancel this order?
             </h2>
-            <p className="mt-2 text-sm leading-6 text-gray-500">
-              Are you sure you want to cancel order #{cancelOrderId}?
-              This demo will change its status to Cancelled.
+
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Are you sure you want to cancel this order? This action
+              will update the order status in the database.
             </p>
+
             <div className="mt-6 flex gap-3">
               <button
                 type="button"
+                disabled={cancelling}
                 onClick={() => setCancelOrderId(null)}
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
               >
                 Keep Order
               </button>
+
               <button
                 type="button"
+                disabled={cancelling}
                 onClick={cancelOrder}
-                className="flex-1 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700"
+                className="flex-1 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
               >
-                Confirm Cancel
+                {cancelling ? "Cancelling..." : "Confirm Cancel"}
               </button>
             </div>
           </section>
         </div>
       )}
-    </div>
+    </main>
   );
 }
 
+// Summary card
 function SummaryCard({
   label,
   value,
@@ -559,13 +697,15 @@ function SummaryCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
+    <div className="rounded-xl border border-slate-200 bg-white p-5">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <p className="text-sm text-gray-500">{label}</p>
+        <p className="text-sm text-slate-500">{label}</p>
+
         <div className="rounded-lg bg-green-50 p-2 text-green-800">
           {icon}
         </div>
       </div>
+
       <p className="break-words text-2xl font-bold text-slate-800">
         {value}
       </p>
@@ -573,6 +713,7 @@ function SummaryCard({
   );
 }
 
+// Modal detail row
 function DetailRow({
   label,
   value,
@@ -582,8 +723,9 @@ function DetailRow({
 }) {
   return (
     <div className="flex justify-between gap-4">
-      <span className="text-gray-500">{label}</span>
-      <span className="text-right font-medium text-gray-800">
+      <span className="text-slate-500">{label}</span>
+
+      <span className="text-right font-medium text-slate-800">
         {value}
       </span>
     </div>

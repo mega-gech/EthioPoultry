@@ -1,4 +1,5 @@
 import {  Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import {
   ShoppingBag,
   Heart,
@@ -7,6 +8,7 @@ import {
   CheckCircle,
   ArrowRight,
 } from "lucide-react";
+import { getBuyerOrderStats } from "../../services/sellerService";
 
 
 
@@ -42,12 +44,6 @@ const recentOrders = [
   },
 ];
 
-const stats = [
-  { label: "Total Orders", value: "3", icon: ShoppingBag },
-  { label: "Pending", value: "1", icon: Clock },
-  { label: "Completed", value: "1", icon: CheckCircle },
-  { label: "Favorites", value: "4", icon: Heart },
-];
 
 function formatPrice(price: number) {
   return `${price.toLocaleString()} ETB`;
@@ -79,6 +75,55 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function BuyerDashboard() {
+  const [stats, setStats] = useState({
+  totalOrders: 0,
+  pendingOrders: 0,
+  completedOrders: 0,
+  favorites: 0,
+});
+
+useEffect(() => {
+  const fetchStats = async () => {
+    try {
+      const data = await getBuyerOrderStats();
+
+      setStats((prev) => ({
+        ...prev,
+        totalOrders: data.totalOrders,
+        pendingOrders: data.pendingOrders,
+        completedOrders: data.completedOrders,
+      }));
+    } catch (error) {
+      console.error("Failed to fetch buyer statistics:", error);
+    }
+  };
+
+  fetchStats();
+}, []);
+
+const statsCards = [
+  {
+    label: "Total Orders",
+    value: stats.totalOrders,
+    icon: ShoppingBag,
+  },
+  {
+    label: "Pending",
+    value: stats.pendingOrders,
+    icon: Clock,
+  },
+  {
+    label: "Completed",
+    value: stats.completedOrders,
+    icon: CheckCircle,
+  },
+  {
+    label: "Favorites",
+    value: stats.favorites,
+    icon: Heart,
+  },
+];
+
   return (
     <div className="min-h-screen bg-white px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl overflow-hidden rounded-2xl border border-slate-200 bg-white">
@@ -114,7 +159,7 @@ export default function BuyerDashboard() {
               className="grid grid-cols-2 gap-4 lg:grid-cols-4"
               aria-label="Order statistics"
             >
-              {stats.map(({ label, value, icon: Icon }) => (
+              {statsCards.map(({ label, value, icon: Icon }) => (
                 <div
                   key={label}
                   className="rounded-xl border border-slate-200 bg-white p-4"
