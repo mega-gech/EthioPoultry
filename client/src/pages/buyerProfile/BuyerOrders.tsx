@@ -12,24 +12,14 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-// Order statuses must match your backend Order model.
-type OrderStatus =
-  | "Pending"
-  | "Confirmed"
-  | "Completed"
-  | "Cancelled";
+import {
+  getBuyerOrders,
+  type BuyerOrder,
+  type OrderItem,
+  type OrderStatus,
+  type Seller,
+} from "../../services/buyerOrderService";
 
-type OrderItem = {
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-};
-
-type Seller = {
-  _id: string;
-  name: string;
-};
 
 type Order = {
   _id: string;
@@ -51,7 +41,7 @@ type ApiResponse<T> = {
 const API_URL = "http://localhost:5000/api";
 
 // These endpoints must be implemented in your Express backend.
-const ORDERS_ENDPOINT = `${API_URL}/orders/my-orders`;
+
 
 const filters = [
   "All",
@@ -108,7 +98,9 @@ function statusStyle(status: OrderStatus) {
 }
 
 export default function BuyerOrders() {
-  const [orders, setOrders] = useState<Order[]>([]);
+
+  const [orders, setOrders] = useState<BuyerOrder[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<BuyerOrder | null>(null);
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<OrderFilter>("All");
@@ -116,7 +108,7 @@ export default function BuyerOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
 
   const [cancelling, setCancelling] = useState(false);
@@ -133,41 +125,24 @@ export default function BuyerOrders() {
   };
 
   // Load orders belonging to the authenticated buyer.
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
-      setError("");
+const fetchOrders = async () => {
+  try {
+    setLoading(true);
+    setError("");
 
-      const token = localStorage.getItem("token");
+    const data = await getBuyerOrders();
 
-      if (!token) {
-        throw new Error("Please log in to view your orders.");
-      }
-
-      const response = await fetch(ORDERS_ENDPOINT, {
-        method: "GET",
-        headers: getAuthHeaders(),
-      });
-
-      const result: ApiResponse<Order[]> = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(
-          result.message || "Failed to load your orders."
-        );
-      }
-
-      setOrders(result.data);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong while loading orders."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    setOrders(data);
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Something went wrong while loading orders."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchOrders();

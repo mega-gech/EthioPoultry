@@ -131,6 +131,84 @@ export const getBuyerOrders = async (
 };
 
 
+export const cancelBuyerOrder = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+
+    const orderId = req.params.orderId;
+
+if (typeof orderId !== "string") {
+  res.status(400).json({
+    success: false,
+    message: "Invalid order ID",
+  });
+  return;
+}
+
+    // Only buyers can cancel orders
+    if (!userId || req.user?.role !== "buyer") {
+      res.status(403).json({
+        success: false,
+        message: "Only buyers can cancel orders",
+      });
+      return;
+    }
+
+    // Validate order ID
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid order ID",
+      });
+      return;
+    }
+
+    // Find an order belonging to this buyer
+    const order = await Order.findOne({
+      _id: orderId,
+      buyerId: userId,
+    });
+
+    if (!order) {
+      res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+      return;
+    }
+
+    // Only Pending orders can be cancelled
+    if (order.status !== "Pending") {
+      res.status(400).json({
+        success: false,
+        message: "Only pending orders can be cancelled",
+      });
+      return;
+    }
+
+    // Update order status
+    order.status = "Cancelled";
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Order cancelled successfully",
+      data: order,
+    });
+  } catch (error) {
+    console.error("cancel buyer order error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to cancel order",
+    });
+  }
+};
+
+
 export const getBuyerOrderStats = async (
   req: Request,
   res: Response
