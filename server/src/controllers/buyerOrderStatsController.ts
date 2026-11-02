@@ -7,7 +7,11 @@ export const createBuyerOrder = async (
   req: Request,
   res: Response
 ): Promise<void> => {
+
+  let session: mongoose.ClientSession | undefined;
+
   try {
+     
     const userId = req.user?.userId;
 
     // Only authenticated buyers can place orders
@@ -40,54 +44,104 @@ export const createBuyerOrder = async (
     }
 
     // Read the product from the database
-    const product = await Product.findById(productId);
+    session = await mongoose.startSession();
+    session.startTransaction();
 
-    if (!product) {
-      res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
-      return;
-    }
+    const updatedProduct = await Product.findOneAndUpdate(
+  {
+    _id: productId,
+    status: "Active",
+    stock: { $gte: quantity },
+  },
+  {
+    $inc: { stock: -quantity },
+  },
+  {
+    new: true,
+    session,
+    runValidators: true,
+  }
+);
 
-    if (product.status !== "Active") {
-      res.status(400).json({
-        success: false,
-        message: "This product is not currently available",
-      });
-      return;
-    }
+
+if (!updatedProduct) {
+  const product = await Product.findById(productId).session(session);
+
+  await session.abortTransaction();
+
+  if (!product) {
+    res.status(404).json({
+      success: false,
+      message: "Product not found",
+    });
+    return;
+  }
+
+  if (product.status !== "Active") {
+    res.status(400).json({
+      success: false,
+      message: "This product is not currently available",
+    });
+    return;
+  }
+
+  res.status(400).json({
+    success: false,
+    message: "Insufficient stock available",
+  });
+  return;
+}
+
+    
+if (updatedProduct.stock === 0) {
+  updatedProduct.status = "Out of Stock";
+  await updatedProduct.save({ session });
+}
 
     // Calculate the total using the database price, not a frontend price
-    const totalAmount = product.price * quantity;
+    const totalAmount = updatedProduct.price * quantity;
 
-    const order = await Order.create({
+    const order = await Order.create(
+      [
+        {
       buyerId: userId,
-      sellerId: product.sellerId,
+      sellerId: updatedProduct.sellerId,
       items: [
         {
-          productId: product._id,
-          name: product.name,
-          price: product.price,
+          productId: updatedProduct._id,
+          name: updatedProduct.name,
+          price: updatedProduct.price,
           quantity,
         },
       ],
       totalAmount,
       status: "Pending",
-    });
+    },
+  ],
+  { session }
+  );
 
+ await session.commitTransaction();
+ 
     res.status(201).json({
       success: true,
       message: "Order placed successfully",
-      data: order, 
+      data: order[0], 
     });
+
   } catch (error) {
     console.error("create buyer order error:", error);
+
+  if (session?.inTransaction()) {
+    await session.abortTransaction();
+  }
 
     res.status(500).json({
       success: false,
       message: "Failed to place order",
     });
+  } finally{
+     await session?.endSession();
   }
 };
 
