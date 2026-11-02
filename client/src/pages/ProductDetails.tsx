@@ -68,6 +68,7 @@ export default function ProductDetails() {
 
   const handleOrderNow = async () => {
     if (!product) return;
+     if (isOrdering) return;
 
     if (!Number.isInteger(orderQuantity) || orderQuantity < 1) {
       setOrderError("Enter a quantity of at least 1.");

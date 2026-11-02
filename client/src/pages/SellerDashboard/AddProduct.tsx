@@ -59,6 +59,7 @@ export default function AddProduct() {
   const [category, setCategory] = useState<ProductCategory | "">("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("Addis Ababa");
+  const [stock, setStock] = useState("");
 
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
@@ -96,10 +97,16 @@ export default function AddProduct() {
 
     const numericPrice = Number(price);
     const numericQuantity = Number(quantity);
+    const numericStock = Number(stock);
 
     if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
       setError("Enter a valid price greater than zero.");
       return;
+    }
+
+    if (!Number.isSafeInteger(numericStock) || numericStock < 1) {
+       setError("Available stock must be at least 1.");
+       return;
     }
 
     if (
@@ -125,6 +132,7 @@ export default function AddProduct() {
      description: description.trim(),
      price: numericPrice,
      quantity: `${numericQuantity} ${unit}`,
+     stock: numericStock,
      category,
      image: imageUrl,
     images: [imageUrl],
@@ -266,6 +274,28 @@ export default function AddProduct() {
                     className={inputClass}
                   />
                 </div>
+
+                <div>
+  <label htmlFor="productStock" className={labelClass}>
+    Available Stock *
+  </label>
+
+  <input
+    id="productStock"
+    type="number"
+    min="1"
+    step="1"
+    value={stock}
+    onChange={(e) => setStock(e.target.value)}
+    placeholder="e.g. 100"
+    required
+    className={inputClass}
+  />
+
+  <p className="mt-1 text-xs text-gray-400">
+    Number of units currently available for buyers.
+  </p>
+</div>
 
                 <div>
                   <label htmlFor="quantityUnit" className={labelClass}>

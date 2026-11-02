@@ -16,6 +16,7 @@ export interface IProduct extends Document {
   description: string;
   price: number;
   quantity: string;
+  stock: number; // Actual available stock
   category: ProductCategory;
   image: string;
   images: string[];
@@ -60,6 +61,12 @@ const productSchema = new Schema<IProduct>(
     message: "Quantity cannot be empty",
    },
   },
+  stock: {
+  type: Number,
+  required: true,
+  min: [0, "Stock cannot be negative"],
+  default: 0,
+},
 
     category: {
       type: String,

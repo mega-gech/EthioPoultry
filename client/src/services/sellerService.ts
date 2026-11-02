@@ -26,6 +26,7 @@ export interface CreateProductData {
   description: string;
   price: number;
   quantity: string;
+  stock: number;
   category: "Eggs" | "Chickens" | "Equipment" | "Feed";
   image: string;
   images: string[];
@@ -44,6 +45,7 @@ export interface SellerProduct {
   description: string;
   price: number;
   quantity: string;
+  stock: number;
   category: "Eggs" | "Chickens" | "Equipment" | "Feed";
   image: string;
   images: string[];
