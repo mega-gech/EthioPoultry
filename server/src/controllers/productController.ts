@@ -138,6 +138,7 @@ export const createProduct = async(
          price,
          quantity,
          category,
+         stock,
          image,
          images,
          location,
@@ -150,6 +151,7 @@ export const createProduct = async(
       price === undefined ||
       price === null ||
       !quantity ||
+      !Number.isSafeInteger(stock) || stock < 1 ||
       !category ||
       !image ||
       !location
@@ -167,6 +169,7 @@ export const createProduct = async(
         price,
         quantity,
         category,
+        stock,
         image,
         images,
         location,
@@ -256,6 +259,7 @@ export const updateProduct = async(
             price,
            quantity,
            category,
+           stock,
            image,
            images,
            location,
@@ -266,11 +270,33 @@ export const updateProduct = async(
     if (description !== undefined) product.description = description;
     if (price !== undefined) product.price = price;
     if (quantity !== undefined) product.quantity = quantity;
-    if (category !== undefined) product.category = category;
-    if (image !== undefined) product.image = image;
-    if (images !== undefined) product.images = images;
-    if (location !== undefined) product.location = location;
-    if (status !== undefined) product.status = status;
+   
+
+if (stock !== undefined) {
+  if (!Number.isSafeInteger(stock) || stock < 0) {
+    res.status(400).json({
+      success: false,
+      message: "Stock must be a non-negative whole number",
+    });
+    return;
+  }
+
+  product.stock = stock;
+  product.status = stock === 0 ? "Out of Stock" : "Active";
+}
+
+if (category !== undefined) product.category = category;
+if (image !== undefined) product.image = image;
+if (images !== undefined) product.images = images;
+if (location !== undefined) product.location = location;
+
+// Allow status changes only when stock is not being updated.
+// Stock determines availability when both are supplied.
+if (status !== undefined && stock === undefined) {
+  product.status = status;
+}
+   
+    
 
     await product.save();
 

@@ -234,6 +234,7 @@ export async function updateProductById(
     description: string;
     price: number;
     quantity: string;
+    stock: number;
     category: "Eggs" | "Chickens" | "Equipment" | "Feed";
     image: string;
     images: string[];

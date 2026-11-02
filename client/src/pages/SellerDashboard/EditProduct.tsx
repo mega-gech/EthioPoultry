@@ -16,6 +16,7 @@ export default function EditProduct() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [stock, setStock] = useState("");
   const [category, setCategory] = useState<
    SellerProduct["category"] | "">("");
   const [description, setDescription] = useState("");
@@ -43,6 +44,11 @@ export default function EditProduct() {
       setPrice(String(data.price));
       setQuantity(data.quantity);
       setCategory(data.category);
+      setStock(
+  data.stock === undefined || data.stock === null
+    ? ""
+    : String(data.stock)
+);
       setDescription(data.description);
       setLocation(data.location);
       setStatus(data.status);
@@ -107,16 +113,29 @@ if (!product) {
   });
 }
 
+
+
  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
   e.preventDefault();
 
   if (!product || !id) return;
+  const numericStock = Number(stock);
+
+if (
+  stock.trim() === "" ||
+  !Number.isSafeInteger(numericStock) ||
+  numericStock < 0
+) {
+  setError("Please enter a valid available stock (0 or more).");
+  return;
+}
 
   if (
     !name.trim() ||
     !price ||
     Number(price) <= 0 ||
     !quantity.trim() ||
+    
     !category ||
     !location.trim() ||
     !description.trim()
@@ -138,6 +157,7 @@ if (!product) {
       description: description.trim(),
       price: Number(price),
       quantity: quantity.trim(),
+      stock: numericStock,
       category: category as SellerProduct["category"],
       image: imageUrl,
       images: imageUrl
@@ -211,7 +231,7 @@ if (!product) {
           </div>
 
           {/* Price and quantity */}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <label
                 htmlFor="editPrice"
@@ -249,6 +269,31 @@ if (!product) {
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-emerald-600"
               />
             </div>
+
+            <div>
+  <label
+    htmlFor="editStock"
+    className="mb-2 block text-sm font-medium text-gray-700"
+  >
+    Available Stock *
+  </label>
+
+  <input
+    id="editStock"
+    type="number"
+    min="0"
+    step="1"
+    value={stock}
+    onChange={(e) => setStock(e.target.value)}
+    required
+    placeholder="Enter available stock"
+    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-emerald-600"
+  />
+
+  <p className="mt-1 text-xs text-gray-500">
+    Enter the actual number of units currently available.
+  </p>
+</div>
           </div>
 
           {/* Category */}
