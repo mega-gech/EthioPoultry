@@ -96,3 +96,39 @@ export const cancelBuyerOrder = async (
 
   return result.data;
 };
+
+
+export interface CreateBuyerOrderResponse {
+  success: boolean;
+  message: string;
+  data: BuyerOrder;
+}
+
+export const createBuyerOrder = async (
+  productId: string,
+  quantity: number
+): Promise<BuyerOrder> => {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    throw new Error("Please log in before placing an order.");
+  }
+
+  const response = await fetch(`${API_URL}/orders`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ productId, quantity }),
+  });
+
+  const result: CreateBuyerOrderResponse = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Failed to place order.");
+  }
+
+  return result.data;
+};
+

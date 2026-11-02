@@ -29,25 +29,7 @@ const stats = [
   { key: "coveredLocations", label: "Cities Covered", icon: "shield" },
 ] as const;
 
-function getPhoneNumber(phone: string | undefined) {
-  if (!phone) return "";
 
-  let number = phone.replace(/\D/g, "");
-
-  // Convert Ethiopian local mobile numbers to international format.
-  if (number.startsWith("0")) {
-    number = `251${number.slice(1)}`;
-  } else if (number.startsWith("9") && number.length === 9) {
-    number = `251${number}`;
-  }
-
-  // Reject missing or obviously incomplete placeholder numbers.
-  if (number.length < 12 || number.length > 15) {
-    return "";
-  }
-
-  return number;
-}
 
 function formatPrice(price: number) {
   return `${price.toLocaleString("en-ET")} ETB`;
@@ -273,46 +255,6 @@ function Products() {
     setSortBy("newest");
   };
 
-  const callSeller = (
-    event: React.MouseEvent<HTMLButtonElement>,
-    phone: string | undefined,
-  ) => {
-    event.stopPropagation();
-
-    const number = getPhoneNumber(phone);
-
-    if (!number) {
-      window.alert("The seller's phone number is not available yet.");
-      return;
-    }
-
-    window.location.href = `tel:+${number}`;
-  };
-
-  const contactWhatsApp = (
-    event: React.MouseEvent<HTMLButtonElement>,
-    phone: string | undefined,
-    productName: string,
-  ) => {
-    event.stopPropagation();
-
-    const number = getPhoneNumber(phone);
-
-    if (!number) {
-      window.alert("The seller's WhatsApp number is not available yet.");
-      return;
-    }
-
-    const message = encodeURIComponent(
-      `Hello, I am interested in your ${productName} listed on EthioPoultry. Is it available?`,
-    );
-
-    window.open(
-      `https://wa.me/${number}?text=${message}`,
-      "_blank",
-      "noopener,noreferrer",
-    );
-  };
 
   const openProduct = (id: string) => {
     navigate(`/products/${id}`);
@@ -680,7 +622,6 @@ function Products() {
                   className="mt-4 grid scroll-mt-24 grid-cols-1 gap-3 min-[480px]:grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]"
                 >
                   {filteredProducts.map((product) => {
-                    const seller = getSeller(product);
                     const isFavorite = favorites.includes(product._id);
                     const isAvailable = product.status !== "Out of Stock";
 
@@ -778,43 +719,33 @@ function Products() {
                           </div>
 
                           {/* Contact actions */}
-                          <div className="mt-3 grid grid-cols-2 gap-2">
-                            <button
-                              type="button"
-                              disabled={!isAvailable}
-                              onClick={(event) => callSeller(event, seller.phone)}
-                              className="flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-md bg-[#0b7a3b] px-1 text-[11px] font-semibold text-white transition hover:bg-[#09662f] disabled:cursor-not-allowed disabled:bg-gray-300"
-                            >
-                              <svg
-                                className="h-3.5 w-3.5 shrink-0"
-                                fill="currentColor"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
-                              >
-                                <path d="M6.62 10.79a15.46 15.46 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.16 21 3 13.84 3 5a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1.02z" />
-                              </svg>
-                              <span className="truncate">Call Seller</span>
-                            </button>
 
-                            <button
-                              type="button"
-                              disabled={!isAvailable}
-                              onClick={(event) =>
-                                contactWhatsApp(event, seller.phone, product.name)
-                              }
-                              className="flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-md border border-[#0b7a3b] bg-white px-1 text-[11px] font-semibold text-[#0b7a3b] transition hover:bg-green-50 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400"
-                            >
-                              <svg
-                                className="h-3.5 w-3.5 shrink-0"
-                                fill="currentColor"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
-                              >
-                                <path d="M20.52 3.48A11.86 11.86 0 0 0 12.07 0C5.52 0 .2 5.32.2 11.87c0 2.09.55 4.13 1.6 5.93L.1 24l6.34-1.66a11.86 11.86 0 0 0 5.63 1.43h.01c6.55 0 11.87-5.32 11.87-11.87 0-3.17-1.23-6.15-3.43-8.42zM12.08 21.78h-.01a9.88 9.88 0 0 1-5.03-1.38l-.36-.21-3.76.99 1-3.66-.23-.38a9.9 9.9 0 0 1-1.52-5.27c0-5.47 4.45-9.92 9.92-9.92 2.65 0 5.14 1.03 7.02 2.91a9.87 9.87 0 0 1 2.9 7.03c0 5.47-4.45 9.92-9.93 9.92z" />
-                              </svg>
-                              <span className="truncate">WhatsApp</span>
-                            </button>
-                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+  <button
+    type="button"
+    disabled={!isAvailable}
+    onClick={(event) => {
+      event.stopPropagation();
+      navigate(`/products/${product._id}`);
+    }}
+    className="h-9 rounded-md bg-[#0b7a3b] px-2 text-[11px] font-semibold text-white hover:bg-[#09662f] disabled:bg-gray-300"
+  >
+    Order Now
+  </button>
+
+  <button
+    type="button"
+    onClick={(event) => {
+      event.stopPropagation();
+      openProduct(product._id);
+    }}
+    className="h-9 rounded-md border border-[#0b7a3b] bg-white px-2 text-[11px] font-semibold text-[#0b7a3b] hover:bg-green-50"
+  >
+    View Details
+  </button>
+</div>
+
+                          
                         </div>
                       </article>
                     );
