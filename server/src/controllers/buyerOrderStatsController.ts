@@ -189,6 +189,9 @@ export const cancelBuyerOrder = async (
   req: Request,
   res: Response
 ): Promise<void> => {
+
+  let session: mongoose.ClientSession | undefined;
+
   try {
     const userId = req.user?.userId;
 
@@ -220,13 +223,16 @@ if (typeof orderId !== "string") {
       return;
     }
 
+    session = await mongoose.startSession();
+    session.startTransaction();
     // Find an order belonging to this buyer
     const order = await Order.findOne({
-      _id: orderId,
-      buyerId: userId,
-    });
+     _id: orderId,
+     buyerId: userId,
+   }).session(session);
 
     if (!order) {
+      await session.abortTransaction();
       res.status(404).json({
         success: false,
         message: "Order not found",
@@ -236,6 +242,7 @@ if (typeof orderId !== "string") {
 
     // Only Pending orders can be cancelled
     if (order.status !== "Pending") {
+      await session.abortTransaction();
       res.status(400).json({
         success: false,
         message: "Only pending orders can be cancelled",
@@ -243,22 +250,58 @@ if (typeof orderId !== "string") {
       return;
     }
 
-    // Update order status
-    order.status = "Cancelled";
-    await order.save();
+    // Return each ordered quantity to its product's stock
+for (const item of order.items) {
+  const product = await Product.findOneAndUpdate(
+    { _id: item.productId },
+    {
+      $inc: { stock: item.quantity },
+      $set: { status: "Active" },
+    },
+    {
+      new: true,
+      session,
+      runValidators: true,
+    }
+  );
 
-    res.status(200).json({
-      success: true,
-      message: "Order cancelled successfully",
-      data: order,
+  // Stop if the product no longer exists
+  if (!product) {
+    await session.abortTransaction();
+
+    res.status(404).json({
+      success: false,
+      message: "A product in this order was not found",
     });
+    return;
+  }
+}
+
+// Mark the order as cancelled in the same transaction
+order.status = "Cancelled";
+await order.save({ session });
+
+// Commit both the stock restoration and order update
+await session.commitTransaction();
+
+res.status(200).json({
+  success: true,
+  message: "Order cancelled successfully",
+  data: order,
+});
+
   } catch (error) {
     console.error("cancel buyer order error:", error);
-
+  
+  if (session?.inTransaction()) {
+    await session.abortTransaction();
+  }
     res.status(500).json({
       success: false,
       message: "Failed to cancel order",
     });
+  } finally{
+    await session?.endSession();
   }
 };
 
