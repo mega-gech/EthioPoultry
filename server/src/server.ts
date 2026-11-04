@@ -10,8 +10,25 @@ import marketPriceRoutes from "./routes/marketPriceRoutes.js";
 import sellerOrderStatsRoutes from "./routes/sellerOrderStatsRoutes.js";
 import buyerOrderStatusRoutes from "./routes/buyerOrderStatsRoutes.js"
 
+import session from "express-session";
+import passport from "passport";
+import { configurePassport } from "./config/passport.js";
+
 dotenv.config();
 const app = express();
+
+configurePassport();
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET!,
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+
+app.use(passport.initialize());
+
 
 app.use(cors());
 app.use(express.json({limit:"10mb"}))
