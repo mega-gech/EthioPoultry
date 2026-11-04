@@ -4,7 +4,8 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IUser extends Document {
   name: string;
   email: string;
-  password: string;
+  password?: string;
+  googleId?: string;
   role: "buyer" | "seller" | "admin";
   location?: string;
   phone?: string;
@@ -28,9 +29,14 @@ const userSchema = new Schema<IUser>(
 
     password: {
       type: String,
-      required: true,
+      required: false,
       select: false,
     },
+    googleId: {
+    type: String,
+    unique: true,
+   sparse: true,
+  },
 
     role: {
       type: String,

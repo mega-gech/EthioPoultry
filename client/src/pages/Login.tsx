@@ -33,8 +33,7 @@ export default function Login() {
       return;
     }
 
-    console.log("Email being sent:", JSON.stringify(email.trim()));
-    console.log("Password length:", password.length);
+   
 
     try
     {
@@ -54,8 +53,7 @@ export default function Login() {
 
   const data = await response.json();
 
-  console.log("Login status:", response.status);
-  console.log("Login response:", data);
+
 
   if (!response.ok) {
     setError(data.message || "Login failed.");

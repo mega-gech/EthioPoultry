@@ -165,6 +165,15 @@ export const login = async (
             return;
         }
 
+        // Google-only accounts do not have an email/password login.
+if (!user.password) {
+    res.status(401).json({
+        success: false,
+        message: "This account uses Google sign-in. Please sign in with Google."
+    });
+    return;
+}
+
         // 3. Compare the submitted password with the stored hash.
         const passwordMatches = await bcrypt.compare(
             password,
