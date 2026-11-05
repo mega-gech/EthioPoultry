@@ -73,6 +73,19 @@ export const getMe = async (
   }
 };
 
+export const logout = (_req: Request, res: Response): void => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Logged out successfully.",
+  });
+};
+
 // REGISTER
 export const register = async (
     req: Request,

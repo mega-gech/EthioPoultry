@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 export default function GoogleCallback() {
   const navigate = useNavigate();
   const [error, setError] = useState("");
-  const { refreshUser } = useAuth();
+  const { refreshUser } = useAuth();      
 
   useEffect(() => {
     const verifyGoogleLogin = async () => {

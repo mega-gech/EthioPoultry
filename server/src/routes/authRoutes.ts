@@ -5,7 +5,8 @@ import {
     login,
     createToken,
     setAuthCookie,
-    getMe
+    getMe,
+    logout
 } from "../controllers/authController.js";
 import { authMiddleWare } from "../middleware/authMiddleware.js";
 import passport from "passport";
@@ -15,6 +16,7 @@ const router = Router();
 router.post("/register", register);
 router.post("/login", login);
 router.get("/me", authMiddleWare, getMe);
+router.post("/logout", logout);
 
 router.get(
   "/google",

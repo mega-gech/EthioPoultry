@@ -7,10 +7,9 @@ import {
   PlusCircle,
 } from "lucide-react";
 
-
-
 import DashboardLayout from "./layout/DashboardLayout";
 import type { DashboardMenuItem } from "./components/dashboard/Sidebar";
+import { useAuth } from "./context/AuthContext";
 
 import { BrowserRouter as Router,  Routes, Route } from 'react-router-dom';
 import Home from "./pages/Home";
@@ -70,31 +69,13 @@ const sellerMenuItems: DashboardMenuItem[] = [
     to: "/seller/products/add",
     icon: PlusCircle,
   },
-  
 ];
 
-type LoggedInUser = {
-  id?: string;
-  name: string;
-  email: string;
-  role: "buyer" | "seller" | "admin";
-};
-
-function getLoggedInUser(): LoggedInUser | null {
-  const storedUser = localStorage.getItem("user");
-
-  if (!storedUser) return null;
-
-  try {
-    return JSON.parse(storedUser) as LoggedInUser;
-  } catch {
-    return null;
-  }
-}
 
 function App() {
 
-  const user = getLoggedInUser();
+
+  const { user } = useAuth();
 
   return (
       <Routes>
@@ -148,8 +129,6 @@ function App() {
     <Route path="/seller/products/edit/:id" element={<EditProduct />} />
   </Route>
 </Route>
-
-
       </Routes>
   );
 }
