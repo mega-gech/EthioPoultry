@@ -1,32 +1,25 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function GoogleCallback() {
   const navigate = useNavigate();
   const [error, setError] = useState("");
+  const { refreshUser } = useAuth();
 
   useEffect(() => {
     const verifyGoogleLogin = async () => {
       try {
-        const response = await fetch(
-          "http://localhost:5000/api/auth/me",
-          {
-            method: "GET",
-            credentials: "include",
-          }
-        );
+        const currentUser = await refreshUser();
 
-        const data = await response.json();
-
-        if (!response.ok || !data.success || !data.user) {
-          setError(data.message || "Google authentication failed.");
+        if (!currentUser) {
+          setError("Google authentication failed. Please try again.");
           return;
         }
 
-        if (data.user.role === "buyer") {
+        if (currentUser.role === "buyer") {
           navigate("/buyer/dashboard", { replace: true });
-        } else if (data.user.role === "seller") {
+        } else if (currentUser.role === "seller") {
           navigate("/seller/dashboard", { replace: true });
         } else {
           navigate("/", { replace: true });
@@ -36,8 +29,9 @@ export default function GoogleCallback() {
       }
     };
 
+    // Actually execute the verification function
     verifyGoogleLogin();
-  }, [navigate]);
+  }, [navigate, refreshUser]);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
@@ -60,9 +54,7 @@ export default function GoogleCallback() {
               Authentication Failed
             </h1>
 
-            <p className="mt-3 text-sm text-gray-600">
-              {error}
-            </p>
+            <p className="mt-3 text-sm text-gray-600">{error}</p>
 
             <button
               onClick={() => navigate("/login", { replace: true })}

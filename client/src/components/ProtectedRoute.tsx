@@ -1,12 +1,6 @@
-import { useEffect, useState } from "react";
-import { Navigate, Outlet } from "react-router-dom";
 
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: "buyer" | "seller" | "admin";
-};
+import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 type ProtectedRouteProps = {
   allowedRole: "buyer" | "seller";
@@ -15,38 +9,16 @@ type ProtectedRouteProps = {
 export default function ProtectedRoute({
   allowedRole,
 }: ProtectedRouteProps) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const response = await fetch(
-          "http://localhost:5000/api/auth/me",
-          {
-            credentials: "include",
-          }
-        );
-
-        if (!response.ok) {
-          setUser(null);
-          return;
-        }
-
-        const data = await response.json();
-        setUser(data.user ?? null);
-      } catch {
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkSession();
-  }, []);
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return <p>Checking your session...</p>;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-gray-600">
+          Checking your session...
+        </p>
+      </div>
+    );
   }
 
   if (!user) {

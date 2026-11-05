@@ -1,6 +1,7 @@
 
 import { useState, type FormEvent } from "react";
 import { FcGoogle } from "react-icons/fc";
+import { useAuth } from "../context/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Eye,
@@ -15,6 +16,7 @@ import logoHen from "../assets/logo_hen.jpg";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -62,12 +64,19 @@ export default function Login() {
     return;
   }
 
-  setMessage("Login successful!");
 
- 
-if (data.user.role === "seller") {
+setMessage("Login successful!");
+
+const currentUser = await refreshUser();
+
+if (!currentUser) {
+  setError("Login succeeded, but we could not verify your session.");
+  return;
+}
+
+if (currentUser.role === "seller") {
   navigate("/seller/dashboard");
-} else if (data.user.role === "buyer") {
+} else if (currentUser.role === "buyer") {
   navigate("/buyer/dashboard");
 } else {
   navigate("/");

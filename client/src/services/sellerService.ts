@@ -232,9 +232,6 @@ export async function updateProductById(
     status: "Active" | "Out of Stock";
   }
 ) {
-
- 
-
   const response = await fetch(`${API_URL}/products/${id}`, {
     method: "PUT",
     credentials: "include",
