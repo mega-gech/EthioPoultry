@@ -21,6 +21,7 @@ type AuthContextType = {
   user: AuthUser | null;
   isLoading: boolean;
   refreshUser: () => Promise<AuthUser | null>;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
  
     const refreshUser = useCallback(async (): Promise<AuthUser | null> => {
-  try {
+    try {
     const response = await fetch(
       "http://localhost:5000/api/auth/me",
       {
@@ -54,9 +55,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     return null;
   }
-}, []);
+ }, []);
 
- 
+ const logout = useCallback(async (): Promise<void> => {
+  try {
+    await fetch("http://localhost:5000/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
+  } finally {
+    // Clear the shared user state even if the request fails.
+    setUser(null);
+  }
+}, []);
 
   useEffect(() => {
   const loadCurrentUser = async () => {
@@ -71,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }, [refreshUser]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, refreshUser }}>
+    <AuthContext.Provider value={{ user, isLoading, refreshUser ,logout}}>
       {children}
     </AuthContext.Provider>
   );

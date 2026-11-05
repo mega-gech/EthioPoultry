@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Menu } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 import Sidebar, {
   type DashboardMenuItem,
@@ -35,13 +36,11 @@ export default function DashboardLayout({
 };
 
 const pageTitle = pageTitles[location.pathname] || "Dashboard";
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    navigate("/", { replace: true });
-  };
+  const { logout } = useAuth();
+  const handleLogout = async () => {
+  await logout();
+  navigate("/login", { replace: true });
+};
 
   return (
     <div className="min-h-screen bg-gray-50 md:flex">
