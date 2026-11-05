@@ -1,16 +1,6 @@
 export const API_URL = "http://localhost:5000/api";
 
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem("token");
 
-  if (!token) {
-    throw new Error("Please log in to continue");
-  }
-
-  return {
-    Authorization: `Bearer ${token}`,
-  };
-}
 
 export interface Seller {
   _id: string;
@@ -86,7 +76,7 @@ export interface BuyerOrderStats {
 
 export async function getBuyerOrderStats(): Promise<BuyerOrderStats> {
   const response = await fetch(`${API_URL}/buyer-order-stats`, {
-    headers: getAuthHeaders(),
+    credentials: "include",
   });
 
   const result: {
@@ -106,7 +96,7 @@ export async function getBuyerOrderStats(): Promise<BuyerOrderStats> {
 
 export async function getSellerOrderStats(): Promise<SellerOrderStats> {
   const response = await fetch(`${API_URL}/seller-order-stats`, {
-    headers: getAuthHeaders(),
+    credentials: "include",
   });
 
   const result = await response.json();
@@ -179,7 +169,7 @@ export async function getStatistics(): Promise<MarketplaceStatistics> {
 
 export async function getMyProducts(): Promise<SellerProduct[]> {
   const response = await fetch(`${API_URL}/products/mine`, {
-    headers:getAuthHeaders(),
+    credentials: "include",
   });
 
   const result = await response.json();
@@ -194,8 +184,8 @@ export async function getMyProducts(): Promise<SellerProduct[]> {
 export async function createProduct(productData:CreateProductData) {
     const response = await fetch(`${API_URL}/products`, {
         method: "POST",
+        credentials: "include",
         headers: {
-     ...getAuthHeaders(),
   "Content-Type": "application/json",
 },
         body: JSON.stringify(productData)
@@ -213,7 +203,7 @@ export async function createProduct(productData:CreateProductData) {
 export async function deleteProductById(id: string) {
   const response = await fetch(`${API_URL}/products/${id}`, {
     method: "DELETE",
-    headers: getAuthHeaders(),  
+    credentials: "include", 
   });
 
   const result = await response.json();
@@ -247,9 +237,9 @@ export async function updateProductById(
 
   const response = await fetch(`${API_URL}/products/${id}`, {
     method: "PUT",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
     }, 
     body: JSON.stringify(productData),
   });

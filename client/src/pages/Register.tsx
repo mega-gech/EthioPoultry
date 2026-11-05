@@ -106,6 +106,7 @@ export default function Register() {
       "http://localhost:5000/api/auth/register",
       {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
@@ -125,8 +126,6 @@ export default function Register() {
      setError(data.message || "Registration failed.");
      return;
      }
-    localStorage.setItem("token", data.token);
-  localStorage.setItem("user", JSON.stringify(data.user));
 
   if (data.user.role === "seller") {
   navigate("/seller/dashboard");

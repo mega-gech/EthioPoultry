@@ -1,4 +1,12 @@
+import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
+
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: "buyer" | "seller" | "admin";
+};
 
 type ProtectedRouteProps = {
   allowedRole: "buyer" | "seller";
@@ -7,25 +15,47 @@ type ProtectedRouteProps = {
 export default function ProtectedRoute({
   allowedRole,
 }: ProtectedRouteProps) {
-  const token = localStorage.getItem("token");
-  const savedUser = localStorage.getItem("user");
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (!token || !savedUser) {
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:5000/api/auth/me",
+          {
+            credentials: "include",
+          }
+        );
+
+        if (!response.ok) {
+          setUser(null);
+          return;
+        }
+
+        const data = await response.json();
+        setUser(data.user ?? null);
+      } catch {
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkSession();
+  }, []);
+
+  if (isLoading) {
+    return <p>Checking your session...</p>;
+  }
+
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  try {
-    const user = JSON.parse(savedUser);
-
-    if (user.role !== allowedRole) {
-      return <Navigate to="/" replace />;
-    }
-
-    return <Outlet />;
-  } catch {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    return <Navigate to="/login" replace />;
+  if (user.role !== allowedRole) {
+    return <Navigate to="/" replace />;
   }
+
+  return <Outlet />;
 }

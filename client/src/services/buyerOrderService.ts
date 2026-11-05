@@ -40,16 +40,11 @@ interface BuyerOrdersResponse {
 }
 
 export const getBuyerOrders = async (): Promise<BuyerOrder[]> => {
-  const token = localStorage.getItem("token");
-
-  if (!token) {
-    throw new Error("Please log in to view your orders.");
-  }
-
+ 
   const response = await fetch(`${API_URL}/orders/my-orders`, {
     method: "GET",
+    credentials: "include",
     headers: {
-      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
   });
@@ -67,18 +62,14 @@ export const getBuyerOrders = async (): Promise<BuyerOrder[]> => {
 export const cancelBuyerOrder = async (
   orderId: string
 ): Promise<BuyerOrder> => {
-  const token = localStorage.getItem("token");
 
-  if (!token) {
-    throw new Error("Please log in to cancel your order.");
-  }
 
   const response = await fetch(
     `${API_URL}/orders/${orderId}/cancel`,
     {
       method: "PATCH",
+      credentials: "include",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
     }
@@ -108,16 +99,12 @@ export const createBuyerOrder = async (
   productId: string,
   quantity: number
 ): Promise<BuyerOrder> => {
-  const token = localStorage.getItem("token");
 
-  if (!token) {
-    throw new Error("Please log in before placing an order.");
-  }
 
   const response = await fetch(`${API_URL}/orders`, {
     method: "POST",
+    credentials: "include",
     headers: {
-      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ productId, quantity }),

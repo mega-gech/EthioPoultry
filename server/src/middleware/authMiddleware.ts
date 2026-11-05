@@ -23,17 +23,15 @@ export const authMiddleWare = async(
     next: NextFunction
 ): Promise<void> => {
 
-    const authHeader = req.headers.authorization
+     const token = req.cookies.token;
 
-    if(!authHeader || !authHeader.startsWith("Bearer")){
-        res.status(401).json({
-            success: false,
-            message: "access denied or no token provided"
-        })
-        return
-    }
-
-     const token = authHeader.split(" ")[1];
+if (!token) {
+  res.status(401).json({
+    success: false,
+    message: "Access denied. No authentication cookie provided.",
+  });
+  return;
+}
 
      const secret = process.env.JWT_SECRET;
 

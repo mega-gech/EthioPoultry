@@ -28,6 +28,51 @@ export const setAuthCookie = (res: Response, token: string): void => {
     });
 };
 
+// GET CURRENT LOGGED-IN USER
+export const getMe = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: "Not authenticated.",
+      });
+      return;
+    }
+
+    const user = await User.findById(req.user.userId).select(
+      "_id name email role location phone"
+    );
+
+    if (!user) {
+      res.status(401).json({
+        success: false,
+        message: "User account not found.",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        location: user.location,
+        phone: user.phone,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Unable to retrieve user information.",
+    });
+  }
+};
+
 // REGISTER
 export const register = async (
     req: Request,

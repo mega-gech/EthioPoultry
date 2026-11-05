@@ -41,6 +41,7 @@ export default function Login() {
     "http://localhost:5000/api/auth/login",
     {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
@@ -61,10 +62,7 @@ export default function Login() {
   }
 
   setMessage("Login successful!");
-  localStorage.setItem("token", data.token);
-  localStorage.setItem("user", JSON.stringify(data.user));
 
- setMessage("Login successful!");
  
 if (data.user.role === "seller") {
   navigate("/seller/dashboard");
