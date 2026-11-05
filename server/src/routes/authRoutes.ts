@@ -2,7 +2,9 @@
 import { Router } from "express";
 import {
     register,
-    login
+    login,
+    createToken,
+    setAuthCookie
 } from "../controllers/authController.js";
 import passport from "passport";
 
@@ -25,8 +27,17 @@ router.get(
     session: false,
   }),
   (req, res) => {
-    // Handle successful Google authentication here
+   if (!req.user) {
+    res.redirect("http://localhost:5173/login");
+    return;
   }
+
+  const token = createToken(req.user.userId);
+
+  setAuthCookie(res, token);
+
+  res.redirect("http://localhost:5173/auth/google/callback");
+}
 );
 
 export default router;

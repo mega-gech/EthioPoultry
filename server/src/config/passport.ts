@@ -35,8 +35,11 @@ export const configurePassport = () => {
           let user = await User.findOne({ googleId: profile.id });
 
           if (user) {
-            return done(null, user);
-          }
+    return done(null, {
+        userId: user._id.toString(),
+        role: user.role,
+    });
+}
 
           // Check whether this email already belongs to an account.
           user = await User.findOne({ email });
@@ -52,7 +55,10 @@ export const configurePassport = () => {
             user.googleId = profile.id;
             await user.save();
 
-            return done(null, user);
+            return done(null, {
+            userId: user._id.toString(),
+            role: user.role,
+          });
           }
 
           // Create a new Google-authenticated buyer.
@@ -63,7 +69,10 @@ export const configurePassport = () => {
             role: "buyer",
           });
 
-          return done(null, newUser);
+          return done(null, {
+         userId: newUser._id.toString(),
+         role: newUser.role,
+        });
         } catch (error) {
           return done(error as Error, undefined);
         }

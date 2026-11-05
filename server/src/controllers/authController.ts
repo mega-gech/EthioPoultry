@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 
 // Create a JWT for an authenticated user.
-const createToken = (userId: string): string => {
+export const createToken = (userId: string): string => {
     const secret = process.env.JWT_SECRET;
 
     if (!secret) {
@@ -17,6 +17,15 @@ const createToken = (userId: string): string => {
         secret,
         { expiresIn: "1d" }
     );
+};
+
+export const setAuthCookie = (res: Response, token: string): void => {
+    res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 24 * 60 * 60 * 1000,
+    });
 };
 
 // REGISTER
@@ -105,12 +114,12 @@ const userRole = role ?? "buyer";
 
         // 8. Create an authentication token.
         const token = createToken(user._id.toString());
+        setAuthCookie(res, token);
 
         // 9. Return safe user details.
         res.status(201).json({
             success: true,
             message: "Registration successful",
-            token,
             user: {
                 id: user._id,
                 name: user.name,
@@ -190,12 +199,12 @@ if (!user.password) {
 
         // 4. Create a token after successful verification.
         const token = createToken(user._id.toString());
+        setAuthCookie(res, token);
 
         // 5. Return safe user details.
         res.status(200).json({
             success: true,
             message: "Login successful",
-            token,
             user: {
                 id: user._id,
                 name: user.name,
