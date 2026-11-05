@@ -1,5 +1,6 @@
 
 import { useState, type FormEvent } from "react";
+import { FcGoogle } from "react-icons/fc";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Eye,
@@ -286,6 +287,33 @@ if (data.user.role === "seller") {
               />
             </button>
           </form>
+
+          {/* Google Login */}
+<div className="mt-5">
+  <div className="relative mb-5">
+    <div className="absolute inset-0 flex items-center">
+      <div className="w-full border-t border-gray-200" />
+    </div>
+
+    <div className="relative flex justify-center">
+      <span className="bg-white px-3 text-xs text-gray-500">
+        OR CONTINUE WITH
+      </span>
+    </div>
+  </div>
+
+  <button
+    type="button"
+    onClick={() => {
+      window.location.href =
+        "http://localhost:5000/api/auth/google";
+    }}
+    className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+  >
+    <FcGoogle size={20} />
+    Continue with Google
+  </button>
+</div>
 
           {/* Registration */}
           <p className="mt-7 text-center text-sm text-gray-600">
