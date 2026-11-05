@@ -29,6 +29,7 @@ import EditProduct from './pages/SellerDashboard/EditProduct';
 import ProtectedRoute from './components/ProtectedRoute';
 import HealthTips from "./pages/HealthTips";
 import MarketPrice from "./pages/MarketPrice"
+import GoogleCallback from "./components/GoogleCallback"
 
 const buyerMenuItems: DashboardMenuItem[] = [
   {
@@ -104,9 +105,10 @@ function App() {
         <Route path="/products/:id" element={<ProductDetails />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route  path="/auth/google/callback"  element={<GoogleCallback />}
+/>
 
-        
-{/* Buyer-only pages */}
+
 {/* Buyer-only pages */}
 <Route element={<ProtectedRoute allowedRole="buyer" />}>
   <Route
