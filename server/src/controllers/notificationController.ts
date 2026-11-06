@@ -135,3 +135,45 @@ export const markAsRead = async (
     });
   }
 };
+
+
+export const markAllAsRead = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+      return;
+    }
+
+    const result = await Notification.updateMany(
+      {
+        recipient: userId,
+        isRead: false,
+      },
+      {
+        $set: { isRead: true },
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "All notifications marked as read",
+      modifiedCount: result.modifiedCount,
+    });
+
+  } catch (error) {
+    console.error("Mark all notifications as read error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to mark all notifications as read",
+    });
+  }
+};
