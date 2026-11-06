@@ -11,6 +11,7 @@ export interface INotification extends Document {
   | "new_order"
   | "order_update";
   relatedId?: mongoose.Types.ObjectId;
+  eventKey: string;
   isRead: boolean;
 }
 
@@ -49,6 +50,11 @@ const notificationSchema = new Schema<INotification>(
       type: Schema.Types.ObjectId,
     },
 
+    eventKey: {
+     type: String,
+     required: true,
+    },
+
     isRead: {
       type: Boolean,
       default: false,
@@ -61,6 +67,15 @@ const notificationSchema = new Schema<INotification>(
 
 notificationSchema.index({ recipient: 1, createdAt: -1 });
 notificationSchema.index({ recipient: 1, isRead: 1 });
+notificationSchema.index(
+  { recipient: 1, eventKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      eventKey: { $type: "string" },
+    },
+  }
+);
 
 const Notification = mongoose.model<INotification>(
   "Notification",

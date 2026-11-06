@@ -25,6 +25,8 @@ export interface IProduct extends Document {
   rating: number;
   reviews: number;
   status: ProductStatus;
+  createdAt: Date;
+  updatedAt: Date;
 }
 //schema
 const productSchema = new Schema<IProduct>(

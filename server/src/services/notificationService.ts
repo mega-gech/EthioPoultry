@@ -2,6 +2,7 @@
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import Notification from "../models/Notification.js";
+import { randomUUID } from "crypto";
 
 type ProductNotificationType = "new_product" | "product_update";
 
@@ -10,6 +11,7 @@ interface ProductNotificationData {
   productId: mongoose.Types.ObjectId;
   productName: string;
   type: ProductNotificationType;
+  eventId: string;
 }
 
 export const notifyBuyersAboutProduct = async ({
@@ -17,6 +19,7 @@ export const notifyBuyersAboutProduct = async ({
   productId,
   productName,
   type,
+  eventId,
 }: ProductNotificationData): Promise<void> => {
 
   // 1. Find all registered buyers
@@ -46,15 +49,27 @@ export const notifyBuyersAboutProduct = async ({
       : `${sellerName} updated the product: ${productName}.`;
 
   // 5. Create an individual notification for every buyer
-  await Notification.insertMany(
-    buyers.map((buyer) => ({
-      recipient: buyer._id,
-      sender: sellerId,
-      title,
-      message,
-      type,
-      relatedId: productId,
-      isRead: false,
-    }))
-  );
+  await Notification.bulkWrite(
+  buyers.map((buyer) => ({
+    updateOne: {
+      filter: {
+        recipient: buyer._id,
+        eventKey: `${type}:${productId}:${eventId}`,
+      },
+      update: {
+        $setOnInsert: {
+          recipient: buyer._id,
+          sender: sellerId,
+          title,
+          message,
+          type,
+          relatedId: productId,
+          eventKey: `${type}:${productId}:${eventId}`,
+          isRead: false,
+        },
+      },
+      upsert: true,
+    },
+  }))
+);
 };

@@ -185,6 +185,7 @@ try {
         productId: product._id,
         productName: product.name,
         type: "new_product",
+        eventId: product._id.toString(),
     });
 } catch (notificationError) {
     console.error(
@@ -282,6 +283,12 @@ export const updateProduct = async(
            status,
        } = req.body;
 
+       const importantFieldsChanged =
+    (name !== undefined && product.name !== name) ||
+    (price !== undefined && product.price !== price) ||
+    (quantity !== undefined && product.quantity !== quantity) ||
+    (stock !== undefined && product.stock !== stock);
+
     if (name !== undefined) product.name = name;
     if (description !== undefined) product.description = description;
     if (price !== undefined) product.price = price;
@@ -314,19 +321,24 @@ if (status !== undefined && stock === undefined) {
     await product.save();
 
     // Notify all buyers about the product update
-try {
-    await notifyBuyersAboutProduct({
-        sellerId: userId,
-        productId: product._id,
-        productName: product.name,
-        type: "product_update",
-    });
-} catch (notificationError) {
-    console.error(
-        "Product updated, but notification delivery failed:",
-        notificationError
-    );
+
+    if (importantFieldsChanged) {
+    try {
+        await notifyBuyersAboutProduct({
+            sellerId: userId,
+            productId: product._id,
+            productName: product.name,
+            type: "product_update",
+            eventId: product.updatedAt.toISOString(),
+        });
+    } catch (notificationError) {
+        console.error(
+            "Product updated, but notification delivery failed:",
+            notificationError
+        );
+    }
 }
+
 
         res.status(200).json({
             success:true,
