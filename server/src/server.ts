@@ -8,7 +8,8 @@ import authRoutes from "./routes/authRoutes.js"
 import statisticsRoutes from "./routes/statisticsRoutes.js";
 import marketPriceRoutes from "./routes/marketPriceRoutes.js";
 import sellerOrderStatsRoutes from "./routes/sellerOrderStatsRoutes.js";
-import buyerOrderStatusRoutes from "./routes/buyerOrderStatsRoutes.js"
+import buyerOrderStatusRoutes from "./routes/buyerOrderStatsRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js"
 
 import session from "express-session";
 import passport from "passport";
@@ -47,6 +48,7 @@ app.use("/api/statistics", statisticsRoutes);
 app.use("/api/market-prices", marketPriceRoutes);
 app.use("/api/seller-order-stats", sellerOrderStatsRoutes);
 app.use("/api/orders", buyerOrderStatusRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 const port = process.env.PORT
 
