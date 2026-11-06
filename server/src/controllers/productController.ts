@@ -1,6 +1,7 @@
 import type {Request, Response} from "express"
 import mongoose from "mongoose"
 import Product from "../models/Product.js"
+import { notifyBuyersAboutProduct } from "../services/notificationService.js";
 
 export const getProducts = async (
     req: Request,
@@ -177,6 +178,21 @@ export const createProduct = async(
         rating,
     })
 
+    // Notify all buyers about the new product
+try {
+    await notifyBuyersAboutProduct({
+        sellerId: userId,
+        productId: product._id,
+        productName: product.name,
+        type: "new_product",
+    });
+} catch (notificationError) {
+    console.error(
+        "Product created, but notification delivery failed:",
+        notificationError
+    );
+}
+
     res.status(201).json({
         success: true,
         data: product
@@ -290,15 +306,27 @@ if (image !== undefined) product.image = image;
 if (images !== undefined) product.images = images;
 if (location !== undefined) product.location = location;
 
-// Allow status changes only when stock is not being updated.
 // Stock determines availability when both are supplied.
 if (status !== undefined && stock === undefined) {
   product.status = status;
 }
-   
-    
 
     await product.save();
+
+    // Notify all buyers about the product update
+try {
+    await notifyBuyersAboutProduct({
+        sellerId: userId,
+        productId: product._id,
+        productName: product.name,
+        type: "product_update",
+    });
+} catch (notificationError) {
+    console.error(
+        "Product updated, but notification delivery failed:",
+        notificationError
+    );
+}
 
         res.status(200).json({
             success:true,
