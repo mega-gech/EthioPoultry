@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Bell, CheckCheck, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Bell, Loader2 } from "lucide-react";
 
 import {
   getNotifications,
@@ -15,6 +15,7 @@ export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   const loadNotifications = useCallback(async () => {
   try {
@@ -44,6 +45,33 @@ useEffect(() => {
 
   return () => clearInterval(interval);
 }, [loadNotifications]);
+
+useEffect(() => {
+  if (!isOpen) return;
+
+  const handleOutsideClick = (event: PointerEvent) => {
+    if (
+      notificationRef.current &&
+      !notificationRef.current.contains(event.target as Node)
+    ) {
+      setIsOpen(false);
+    }
+  };
+
+  const handleEscape = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      setIsOpen(false);
+    }
+  };
+
+  document.addEventListener("pointerdown", handleOutsideClick);
+  document.addEventListener("keydown", handleEscape);
+
+  return () => {
+    document.removeEventListener("pointerdown", handleOutsideClick);
+    document.removeEventListener("keydown", handleEscape);
+  };
+}, [isOpen]);
 
 const handleMarkAsRead = async (notificationId: string) => {
   try {
@@ -93,8 +121,9 @@ const handleMarkAllAsRead = async () => {
   }
 };
 
+
 return (
-  <div className="relative">
+  <div ref={notificationRef} className="relative">
     {/* Notification bell */}
     <button
       type="button"
@@ -106,23 +135,23 @@ return (
       <Bell size={22} />
 
       {unreadCount > 0 && (
-        <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+        <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
           {unreadCount > 99 ? "99+" : unreadCount}
         </span>
       )}
     </button>
 
-    {/* Notification dropdown */}
+    {/* Notification panel */}
     {isOpen && (
-      <div className="absolute right-0 top-full z-50 mt-3 w-[min(360px,calc(100vw-2rem)] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
+      <div className="absolute right-0 top-full z-50 mt-3 w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
 
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <div>
-            <h3 className="font-semibold text-gray-900">
+            <h3 className="text-base font-semibold text-gray-900">
               Notifications
             </h3>
-            <p className="text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-500">
               {unreadCount} unread notifications
             </p>
           </div>
@@ -131,20 +160,19 @@ return (
             <button
               type="button"
               onClick={handleMarkAllAsRead}
-              className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 hover:text-emerald-900"
+              className="text-xs font-medium text-emerald-700 transition hover:text-emerald-900"
             >
-              <CheckCheck size={15} />
               Mark all as read
             </button>
           )}
         </div>
 
-        {/* Notification content */}
+        {/* Notification list */}
         <div className="max-h-[420px] overflow-y-auto">
 
           {isLoading ? (
             <div className="flex items-center justify-center gap-2 p-8 text-sm text-gray-500">
-              <Loader2 size={18} className="animate-spin" />
+              <Loader2 size={17} className="animate-spin" />
               Loading notifications...
             </div>
           ) : error ? (
@@ -153,7 +181,7 @@ return (
             </div>
           ) : notifications.length === 0 ? (
             <div className="p-8 text-center">
-              <Bell size={30} className="mx-auto mb-2 text-gray-300" />
+              <Bell size={25} className="mx-auto mb-2 text-gray-300" />
               <p className="text-sm font-medium text-gray-700">
                 No notifications yet
               </p>
@@ -167,26 +195,26 @@ return (
                 key={notification._id}
                 type="button"
                 onClick={() => handleMarkAsRead(notification._id)}
-                className={`flex w-full gap-3 border-b border-gray-100 px-4 py-4 text-left transition hover:bg-gray-50 ${
-                  !notification.isRead ? "bg-emerald-50/70" : "bg-white"
+                className={`flex w-full items-start gap-3 border-b border-gray-100 px-5 py-4 text-left transition hover:bg-gray-50 ${
+                  !notification.isRead ? "bg-emerald-50/50" : "bg-white"
                 }`}
               >
-                <div className="mt-1">
-                  <span
-                    className={`block h-2.5 w-2.5 rounded-full ${
-                      !notification.isRead
-                        ? "bg-emerald-600"
-                        : "bg-gray-300"
-                    }`}
-                  />
-                </div>
+                {/* Unread indicator */}
+                <span
+                  className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                    !notification.isRead
+                      ? "bg-emerald-600"
+                      : "bg-transparent"
+                  }`}
+                />
 
+                {/* Notification details */}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-gray-900">
                     {notification.title}
                   </p>
 
-                  <p className="mt-1 text-sm text-gray-600">
+                  <p className="mt-1 text-sm leading-relaxed text-gray-600">
                     {notification.message}
                   </p>
 
@@ -197,9 +225,19 @@ return (
               </button>
             ))
           )}
-
         </div>
+
+        {/* Footer */}
+        {notifications.length > 0 && (
+          <div className="border-t border-gray-100 px-5 py-3">
+            <p className="text-center text-xs text-gray-400">
+              Showing recent notifications
+            </p>
+          </div>
+        )}
       </div>
     )}
   </div>
 );}
+
+
