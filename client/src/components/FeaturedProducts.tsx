@@ -140,6 +140,12 @@ function FeaturedProducts() {
     .filter((product): product is SellerProduct => Boolean(product))
     .slice(0, 4);
 
+     const openProduct = (id: string) => {
+    navigate(`/products/${id}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+
   const themeStyles = {
     green: {
       card: "bg-[#eef5eb]",
@@ -206,7 +212,10 @@ function FeaturedProducts() {
             ) : (
               /* FOUR CARDS ON DESKTOP, TWO ON SMALL SCREENS */
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {displayedProducts.map((product) => (
+                {displayedProducts.map((product) => {
+                  const isAvailable = product.status !== "Out of Stock";
+                
+                return(
                   <article
                     key={product._id}
                     className="group min-w-0 overflow-hidden rounded-md border border-gray-200 bg-white transition hover:border-green-200 hover:shadow-md"
@@ -250,30 +259,34 @@ function FeaturedProducts() {
                       </p>
 
                       <div className="mt-2 flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            navigate(`/products/${product._id}`)
-                          }
-                          aria-label={`View ${product.name} contact details`}
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-green-200 text-green-800 transition hover:bg-green-50"
-                        >
-                          <Phone size={13} />
-                        </button>
+                       
+ <button
+    type="button"
+    disabled={!isAvailable}
+    onClick={(event) => {
+      event.stopPropagation();
+      navigate(`/products/${product._id}`);
+    }}
+    className="h-9 rounded-md bg-[#0b7a3b] px-2 text-[11px] font-semibold text-white hover:bg-[#09662f] disabled:bg-gray-300"
+  >
+    Order Now
+  </button>
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            navigate(`/products/${product._id}`)
-                          }
-                          className="min-w-0 flex-1 rounded border border-green-200 px-1 py-1.5 text-[9px] font-semibold text-green-800 transition hover:bg-green-50 sm:text-[10px]"
-                        >
-                          View Details
-                        </button>
+  <button
+    type="button"
+    onClick={(event) => {
+      event.stopPropagation();
+      openProduct(product._id);
+    }}
+    className="h-9 rounded-md border border-[#0b7a3b] bg-white px-2 text-[11px] font-semibold text-[#0b7a3b] hover:bg-green-50"
+  >
+    View Details
+  </button>
+                        
                       </div>
                     </div>
                   </article>
-                ))}
+)})}
               </div>
             )}
           </div>
