@@ -216,3 +216,40 @@ res.status(200).json({
     });
   }
 };
+
+export const getMyPayments = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+
+    // Only buyers can view buyer payment history
+    if (!userId || req.user?.role !== "buyer") {
+      res.status(403).json({
+        success: false,
+        message: "Only buyers can view payment history",
+      });
+      return;
+    }
+
+    // Find payments belonging to the logged-in buyer
+    const payments = await Payment.find({
+      buyerId: userId,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: payments.length,
+      data: payments,
+    });
+
+  } catch (error) {
+    console.error("Get payment history error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve payment history",
+    });
+  }
+};
