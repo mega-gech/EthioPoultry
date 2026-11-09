@@ -10,6 +10,7 @@ import marketPriceRoutes from "./routes/marketPriceRoutes.js";
 import sellerOrderStatsRoutes from "./routes/sellerOrderStatsRoutes.js";
 import buyerOrderStatusRoutes from "./routes/buyerOrderStatsRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js"
+import paymentRoutes from "./routes/paymentRoutes.js";
 
 import session from "express-session";
 import passport from "passport";
@@ -49,6 +50,7 @@ app.use("/api/market-prices", marketPriceRoutes);
 app.use("/api/seller-order-stats", sellerOrderStatsRoutes);
 app.use("/api/orders", buyerOrderStatusRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/payments", paymentRoutes);
 
 const port = process.env.PORT
 
