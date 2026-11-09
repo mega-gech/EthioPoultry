@@ -8,7 +8,6 @@ import {
   HeartHandshake,
   MapPinned,
   ArrowRight,
-  Phone,
   LoaderCircle,
 } from "lucide-react";
 
