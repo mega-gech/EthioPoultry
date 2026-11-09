@@ -22,6 +22,13 @@ import {
   type Seller,
 } from "../../services/buyerOrderService";
 
+import {
+  createPayment,
+  simulatePayment,
+  getMyPayments,
+  type Payment,
+} from "../../services/paymentService";
+
 // Order status filters
 const filters = [
   "All",
@@ -108,25 +115,108 @@ export default function BuyerOrders() {
   const [message, setMessage] = useState("");
   const [messageIsError, setMessageIsError] = useState(false);
 
+  const [payments, setPayments] = useState<Payment[]>([]);
+const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
+const [processingPayment, setProcessingPayment] = useState(false);
+const [selectedPayment, setSelectedPayment] =
+  useState<Payment | null>(null);
+
   // Fetch orders belonging to the logged-in buyer
-  const fetchOrders = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
+ const fetchOrders = useCallback(async () => {
+  try {
+    setLoading(true);
+    setError("");
 
-      const data = await getBuyerOrders();
+    const [ordersData, paymentsData] = await Promise.all([
+      getBuyerOrders(),
+      getMyPayments(),
+    ]);
 
-      setOrders(data);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong while loading orders."
-      );
-    } finally {
-      setLoading(false);
+    setOrders(ordersData);
+    setPayments(paymentsData);
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Something went wrong while loading orders."
+    );
+  } finally {
+    setLoading(false);
+  }
+}, []);
+
+// Start or resume payment for an order
+const handlePayOrder = async (orderId: string) => {
+  try {
+    setPayingOrderId(orderId);
+    setMessage("");
+    setMessageIsError(false);
+
+    // Find the latest payment attempt for this order
+    const existingPayment = payments.find(
+      (payment) => payment.orderId === orderId
+    );
+
+    // A successful payment must not be repeated
+    if (existingPayment?.status === "Successful") {
+      setMessage("This order has already been paid.");
+      return;
     }
-  }, []);
+
+    // Reuse an existing pending payment.
+    // Otherwise, create a new attempt.
+    const payment =
+      existingPayment?.status === "Pending"
+        ? existingPayment
+        : await createPayment(orderId);
+
+    setSelectedPayment(payment);
+  } catch (err) {
+    setMessageIsError(true);
+    setMessage(
+      err instanceof Error
+        ? err.message
+        : "Unable to start payment."
+    );
+  } finally {
+    setPayingOrderId(null);
+  }
+};
+
+// Process a development payment simulation
+const handleSimulatePayment = async (
+  result: "Successful" | "Failed"
+) => {
+  if (!selectedPayment) return;
+
+  try {
+    setProcessingPayment(true);
+    setMessage("");
+    setMessageIsError(false);
+
+    await simulatePayment(selectedPayment._id, result);
+
+    setSelectedPayment(null);
+
+    setMessage(
+      result === "Successful"
+        ? "Payment completed successfully. Your order is now confirmed."
+        : "Payment failed. Your order is still pending. You can try again."
+    );
+
+    // Refresh both orders and payment history
+    await fetchOrders();
+  } catch (err) {
+    setMessageIsError(true);
+    setMessage(
+      err instanceof Error
+        ? err.message
+        : "Payment processing failed."
+    );
+  } finally {
+    setProcessingPayment(false);
+  }
+};
 
   useEffect(() => {
     void fetchOrders();
@@ -481,6 +571,28 @@ export default function BuyerOrders() {
                 </div>
 
                 <div className="mt-5 flex flex-wrap gap-3 border-t border-slate-100 pt-4">
+
+                  {order.status === "Pending" && (
+  <button
+    type="button"
+    onClick={() => void handlePayOrder(order._id)}
+    disabled={payingOrderId === order._id}
+    className="inline-flex items-center gap-2 rounded-lg bg-green-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+  >
+    {payingOrderId === order._id ? (
+      <>
+        <LoaderCircle size={16} className="animate-spin" />
+        Starting...
+      </>
+    ) : (
+      <>
+        <Banknote size={16} />
+        Pay Now
+      </>
+    )}
+  </button>
+)}
+
                   <button
                     type="button"
                     onClick={() => setSelectedOrder(order)}
@@ -613,6 +725,82 @@ export default function BuyerOrders() {
           </section>
         </div>
       )}
+
+      {/* Development payment simulation modal */}
+{selectedPayment && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <section
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="payment-modal-title"
+      className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+    >
+      <div className="mb-5 flex items-center justify-between">
+        <h2
+          id="payment-modal-title"
+          className="text-xl font-bold text-slate-900"
+        >
+          Complete Payment
+        </h2>
+
+        <button
+          type="button"
+          disabled={processingPayment}
+          onClick={() => setSelectedPayment(null)}
+          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50"
+        >
+          <XCircle size={21} />
+        </button>
+      </div>
+
+      <div className="rounded-xl bg-green-50 p-4">
+        <p className="text-sm text-green-800">
+          Payment amount
+        </p>
+
+        <p className="mt-1 text-2xl font-bold text-green-900">
+          {formatPrice(selectedPayment.amount)}
+        </p>
+      </div>
+
+      <p className="mt-4 text-sm text-slate-600">
+        This is a development simulation. Choose an outcome to
+        test the payment process. No real money will be transferred.
+      </p>
+
+      <div className="mt-6 space-y-3">
+        <button
+          type="button"
+          disabled={processingPayment}
+          onClick={() =>
+            void handleSimulatePayment("Successful")
+          }
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-700 px-4 py-3 font-semibold text-white hover:bg-green-800 disabled:opacity-50"
+        >
+          {processingPayment ? (
+            <LoaderCircle size={18} className="animate-spin" />
+          ) : null}
+          Simulate Successful Payment
+        </button>
+
+        <button
+          type="button"
+          disabled={processingPayment}
+          onClick={() =>
+            void handleSimulatePayment("Failed")
+          }
+          className="w-full rounded-lg border border-red-200 px-4 py-3 font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+        >
+          Simulate Failed Payment
+        </button>
+      </div>
+
+      <p className="mt-4 text-center text-xs text-slate-400">
+        Development mode only · No actual payment gateway
+      </p>
+    </section>
+  </div>
+)}
 
       {/* Cancellation confirmation modal */}
       {cancelOrderId && (
