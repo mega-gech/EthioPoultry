@@ -20,6 +20,8 @@ export interface IPayment extends Document {
   method: PaymentMethod;
   transactionReference: string;
   status: PaymentStatus;
+  checkoutUrl?: string;
+  providerReference?: string;
   paidAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -68,6 +70,13 @@ const paymentSchema = new Schema<IPayment>(
       enum: ["Pending", "Successful", "Failed", "Refunded"],
       default: "Pending",
     },
+    checkoutUrl: {
+  type: String,
+},
+
+providerReference: {
+  type: String,
+},
 
     paidAt: {
       type: Date,
