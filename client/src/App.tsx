@@ -5,6 +5,7 @@ import {
   Settings,
   Package,
   PlusCircle,
+  CreditCard,
 } from "lucide-react";
 
 import DashboardLayout from "./layout/DashboardLayout";
@@ -29,6 +30,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import HealthTips from "./pages/HealthTips";
 import MarketPrice from "./pages/MarketPrice"
 import GoogleCallback from "./components/GoogleCallback"
+import BuyerPayments from "./pages/buyerProfile/BuyerPayments";
 
 const buyerMenuItems: DashboardMenuItem[] = [
   {
@@ -46,6 +48,11 @@ const buyerMenuItems: DashboardMenuItem[] = [
     to: "/buyer/favorites",
     icon: Heart,
   },
+  {
+  label: "Payment History",
+  to: "/buyer/payments",
+  icon: CreditCard,
+},
   {
     label: "Settings",
     to: "/buyer/settings",
@@ -105,6 +112,7 @@ function App() {
   >
     <Route path="/buyer/dashboard" element={<BuyerDashboard />} />
     <Route path="/buyer/orders" element={<BuyerOrders />} />
+    <Route path="/buyer/payments" element={<BuyerPayments />} />
     <Route path="/buyer/favorites" element={<BuyerFavorites />} />
     <Route path="/buyer/settings" element={<BuyerSettings />} />
   </Route>
