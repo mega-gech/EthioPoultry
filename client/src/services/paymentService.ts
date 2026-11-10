@@ -12,6 +12,11 @@ export type PaymentMethod =
   | "Chapa"
   | "Telebirr";
 
+  export interface ChapaInitializationResponse {
+  payment: Payment;
+  checkoutUrl: string;
+}
+
 export interface Payment {
   _id: string;
   orderId: string;
@@ -104,6 +109,32 @@ export const getMyPayments = async (): Promise<Payment[]> => {
 
   if (!response.ok || !result.success) {
     throw new Error(result.message || "Failed to fetch payment history");
+  }
+
+  return result.data;
+};
+
+export const initializeChapaPayment = async (
+  orderId: string
+): Promise<ChapaInitializationResponse> => {
+  const response = await fetch(
+    `${API_URL}/payments/chapa/initialize`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ orderId }),
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(
+      result.message || "Failed to initialize Chapa payment"
+    );
   }
 
   return result.data;
