@@ -37,6 +37,12 @@ interface PaymentResponse {
   data: Payment;
 }
 
+interface ChapaPaymentResponse {
+  success: boolean;
+  message: string;
+  data: ChapaInitializationResponse;
+}
+
 interface PaymentsHistoryResponse {
   success: boolean;
   count: number;
@@ -129,7 +135,7 @@ export const initializeChapaPayment = async (
     }
   );
 
-  const result = await response.json();
+  const result : ChapaPaymentResponse = await response.json();
 
   if (!response.ok || !result.success) {
     throw new Error(

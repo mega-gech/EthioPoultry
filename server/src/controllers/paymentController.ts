@@ -248,41 +248,41 @@ export const initializeChapaPayment = async (
       phone_number: buyer.phone,
     };
 
-    // 7. Convert ETB to integer cents
-    const amountInCents = Math.round(order.totalAmount * 100);
+    // 7. Prepare the amount in ETB for Chapa v1
+const amount = order.totalAmount.toString();
 
-    if (amountInCents < 100) {
-      res.status(400).json({
-        success: false,
-        message: "Chapa requires a minimum payment of 1 ETB",
-      });
-      return;
-    }
+if (order.totalAmount < 1) {
+  res.status(400).json({
+    success: false,
+    message: "Chapa requires a minimum payment of 1 ETB",
+  });
+  return;
+}
 
-    // 8. Initialize checkout with Chapa
-    const chapaResponse = await fetch(
-      "https://api.chapa.global/v2/payments/hosted",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${chapaSecretKey}`,
-          "Content-Type": "application/json",
-          "Idempotency-Key": payment._id.toString(),
-        },
-        body: JSON.stringify({
-          amount: amountInCents,
-          currency: "ETB",
-          merchant_reference: payment.transactionReference,
-          customer,
-          return_url:
-            `${frontendUrl}/payment/return?paymentId=${payment._id}`,
-          meta: {
-            order_id: order._id.toString(),
-            payment_id: payment._id.toString(),
-          },
-        }),
-      }
-    );
+ 
+// 8. Initialize checkout with Chapa v1
+const chapaResponse = await fetch(
+  "https://api.chapa.co/v1/transaction/initialize",
+  {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${chapaSecretKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      amount,
+      currency: "ETB",
+      email: buyer.email,
+      first_name: customer.first_name,
+      last_name: customer.last_name,
+      phone_number: buyer.phone,
+      tx_ref: payment.transactionReference,
+      return_url:
+        `${frontendUrl}/payment/return?paymentId=${payment._id}`,
+    }),
+  }
+);
+
 
     const chapaResult = await chapaResponse.json() as {
       status?: string;
