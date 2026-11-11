@@ -27,6 +27,7 @@ import {
   simulatePayment,
   getMyPayments,
   type Payment,
+   initializeChapaPayment,
 } from "../../services/paymentService";
 
 // Order status filters
@@ -177,6 +178,31 @@ const handlePayOrder = async (orderId: string) => {
       err instanceof Error
         ? err.message
         : "Unable to start payment."
+    );
+  } finally {
+    setPayingOrderId(null);
+  }
+};
+
+// Initialize a real Chapa payment
+const handleChapaPayment = async (orderId: string) => {
+  try {
+    setPayingOrderId(orderId);
+    setMessage("");
+    setMessageIsError(false);
+
+    const result = await initializeChapaPayment(orderId);
+
+    // Redirect the buyer to Chapa checkout
+    window.location.assign(result.checkoutUrl);
+
+  } catch (err) {
+    setMessageIsError(true);
+
+    setMessage(
+      err instanceof Error
+        ? err.message
+        : "Unable to initialize Chapa payment."
     );
   } finally {
     setPayingOrderId(null);
@@ -575,7 +601,7 @@ const handleSimulatePayment = async (
                   {order.status === "Pending" && (
   <button
     type="button"
-    onClick={() => void handlePayOrder(order._id)}
+    onClick={() => void handleChapaPayment(order._id)}
     disabled={payingOrderId === order._id}
     className="inline-flex items-center gap-2 rounded-lg bg-green-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-50"
   >
@@ -590,6 +616,18 @@ const handleSimulatePayment = async (
         Pay Now
       </>
     )}
+  </button>
+)}
+
+
+{import.meta.env.DEV && (
+  <button
+    type="button"
+    onClick={() => void handlePayOrder(order._id)}
+    disabled={payingOrderId === order._id}
+    className="rounded-lg border border-amber-300 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50"
+  >
+    Test Payment (Development)
   </button>
 )}
 
