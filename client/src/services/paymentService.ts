@@ -59,6 +59,36 @@ export interface SimulatePaymentResponse {
   };
 }
 
+export interface ChapaVerificationResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    payment: Payment;
+    orderStatus: string;
+  };
+  payment?: Payment;
+}
+
+export const verifyChapaPayment = async (
+  paymentId: string
+): Promise<ChapaVerificationResponse> => {
+  const response = await fetch(
+    `${API_URL}/payments/chapa/verify/${paymentId}`,
+    {
+      method: "POST",
+      credentials: "include",
+    }
+  );
+
+  const result: ChapaVerificationResponse = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || "Failed to verify Chapa payment");
+  }
+
+  return result;
+};
+
 // Create a payment for an existing order
 export const createPayment = async (
   orderId: string

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import axios from "axios";
 import mongoose from "mongoose";
 import { randomUUID } from "crypto";
 
@@ -381,6 +382,114 @@ if (!payment) {
     message: "Chapa payment not found",
   });
   return;
+}
+
+if (payment.status === "Successful") {
+  res.status(200).json({
+    success: true,
+    message: "Payment has already been verified",
+    payment,
+  });
+  return;
+}
+
+const chapaSecretKey = process.env.CHAPA_SECRET_KEY;
+
+if (!chapaSecretKey) {
+  res.status(500).json({
+    success: false,
+    message: "Chapa configuration is missing",
+  });
+  return;
+}
+
+const chapaResponse = await axios.get(
+  `https://api.chapa.co/v1/transaction/verify/${payment.transactionReference}`,
+  {
+    headers: {
+      Authorization: `Bearer ${chapaSecretKey}`,
+    },
+  }
+);
+
+const chapaData = chapaResponse.data.data;
+
+
+if (
+  !chapaData ||
+  chapaData.tx_ref !== payment.transactionReference ||
+  Number(chapaData.amount) !== payment.amount ||
+  chapaData.currency !== payment.currency
+) {
+  res.status(400).json({
+    success: false,
+    message: "Chapa transaction details do not match our payment record",
+  });
+  return;
+}
+
+const chapaStatus = String(chapaData.status).toLowerCase();
+
+if (chapaStatus !== "success") {
+  if (chapaStatus === "failed") {
+    payment.status = "Failed";
+    await payment.save();
+  }
+
+  res.status(200).json({
+    success: false,
+    message:
+      chapaStatus === "failed"
+        ? "Chapa payment failed"
+        : "Payment is not successful yet",
+    payment,
+  });
+  return;
+}
+
+const session = await mongoose.startSession();
+
+session.startTransaction();
+
+try {
+  payment.status = "Successful";
+  payment.paidAt = new Date();
+
+  if (chapaData.reference) {
+    payment.providerReference = chapaData.reference;
+  }
+
+  await payment.save({ session });
+
+  const order = await Order.findOne({
+    _id: payment.orderId,
+    buyerId: userId,
+    status: "Pending",
+  }).session(session);
+
+  if (!order) {
+    throw new Error("Order not found or is no longer pending");
+  }
+
+  order.status = "Confirmed";
+
+  await order.save({ session });
+
+  await session.commitTransaction();
+
+  res.status(200).json({
+    success: true,
+    message: "Chapa payment verified successfully",
+    data: {
+      payment,
+      orderStatus: "Confirmed",
+    },
+  });
+} catch (error) {
+  await session.abortTransaction();
+  throw error;
+} finally {
+  await session.endSession();
 }
 
   } catch (error) {
