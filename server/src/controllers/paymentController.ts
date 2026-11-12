@@ -337,6 +337,62 @@ const chapaResponse = await fetch(
   }
 };
 
+export const verifyChapaPayment = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    const { paymentId } = req.params;
+
+    if (typeof paymentId !== "string") {
+  res.status(400).json({
+    success: false,
+    message: "Invalid payment ID",
+  });
+  return;
+}
+
+    if (!userId || req.user?.role !== "buyer") {
+  res.status(403).json({
+    success: false,
+    message: "Only buyers can verify their payments",
+  });
+  return;
+}
+
+if (!mongoose.Types.ObjectId.isValid(paymentId)) {
+  res.status(400).json({
+    success: false,
+    message: "A valid payment ID is required",
+  });
+  return;
+}
+
+const payment = await Payment.findOne({
+  _id: paymentId,
+  buyerId: userId,
+  method: "Chapa",
+});
+
+if (!payment) {
+  res.status(404).json({
+    success: false,
+    message: "Chapa payment not found",
+  });
+  return;
+}
+
+  } catch (error) {
+    console.error("Chapa verification error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to verify Chapa payment",
+    });
+  }
+};
+
 
 
 export const simulatePayment = async (
@@ -448,6 +504,7 @@ res.status(200).json({
     });
   }
 };
+
 
 export const getMyPayments = async (
   req: Request,

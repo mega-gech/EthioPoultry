@@ -31,6 +31,7 @@ import HealthTips from "./pages/HealthTips";
 import MarketPrice from "./pages/MarketPrice"
 import GoogleCallback from "./components/GoogleCallback"
 import BuyerPayments from "./pages/buyerProfile/BuyerPayments";
+import PaymentReturn from "./pages/PaymentReturn"
 
 const buyerMenuItems: DashboardMenuItem[] = [
   {
@@ -91,6 +92,7 @@ function App() {
         <Route path="/health" element = {<HealthTips/>} />
         <Route path="/market" element = {<MarketPrice />} />
         <Route path="/products/:id" element={<ProductDetails />} />
+        <Route path="/payment/return" element={<PaymentReturn />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route  path="/auth/google/callback"  element={<GoogleCallback />}
