@@ -1,12 +1,63 @@
 import { Request, Response } from "express";
 import axios from "axios";
 import mongoose from "mongoose";
-import { randomUUID } from "crypto";
+import {
+  randomUUID,
+  randomBytes,
+  createHmac,
+  timingSafeEqual,
+} from "crypto";
 
-import { randomBytes } from "crypto";
 import User from "../models/User.js";
 import Payment from "../models/Payment.js";
 import Order from "../models/Order.js";
+
+
+const verifyChapaSignature = (
+  rawBody: Buffer,
+  chapaSignature: string | undefined,
+  xChapaSignature: string | undefined
+): boolean => {
+  try {
+    const secret = process.env.CHAPA_WEBHOOK_SECRET;
+
+    if (!secret || !Buffer.isBuffer(rawBody)) {
+      return false;
+    }
+
+    const event = JSON.parse(rawBody.toString("utf8"));
+
+    const isValid = (
+      received: string | undefined,
+      expected: string
+    ): boolean => {
+      if (!received || !/^[a-f0-9]{64}$/i.test(received)) {
+        return false;
+      }
+
+      return timingSafeEqual(
+        Buffer.from(received, "hex"),
+        Buffer.from(expected, "hex")
+      );
+    };
+
+    const expectedSecretSignature = createHmac("sha256", secret)
+      .update(secret)
+      .digest("hex");
+
+    const expectedBodySignature = createHmac("sha256", secret)
+      .update(JSON.stringify(event))
+      .digest("hex");
+
+    return (
+      isValid(chapaSignature, expectedSecretSignature) ||
+      isValid(xChapaSignature, expectedBodySignature)
+    );
+  } catch {
+    return false;
+  }
+};
+
 
 export const createPayment = async (
   req: Request,
@@ -108,6 +159,218 @@ res.status(201).json({
     });
   }
 };
+
+
+export const chapaWebhook = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    // 1. Confirm the original request body is available
+    if (!Buffer.isBuffer(req.body)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid webhook request body",
+      });
+      return;
+    }
+
+    // 2. Validate Chapa's signature
+    const isValid = verifyChapaSignature(
+      req.body,
+      req.get("chapa-signature"),
+      req.get("x-chapa-signature")
+    );
+
+    if (!isValid) {
+      res.status(401).json({
+        success: false,
+        message: "Invalid webhook signature",
+      });
+      return;
+    }
+
+    // 3. Read the authenticated event
+    const event = JSON.parse(req.body.toString("utf8"));
+
+    const {
+      event: eventType,
+      status,
+      tx_ref,
+    } = event;
+
+    if (!tx_ref) {
+      res.status(400).json({
+        success: false,
+        message: "Transaction reference is missing",
+      });
+      return;
+    }
+
+    // 4. Initially process successful payment events only
+    if (
+      eventType !== "charge.success" ||
+      String(status).toLowerCase() !== "success"
+    ) {
+      res.status(200).json({
+        success: true,
+        message: "Webhook event acknowledged",
+      });
+      return;
+    }
+
+    // 5. Find the corresponding Chapa payment
+    const payment = await Payment.findOne({
+      transactionReference: tx_ref,
+      method: "Chapa",
+    });
+
+    if (!payment) {
+      res.status(404).json({
+        success: false,
+        message: "Payment not found",
+      });
+      return;
+    }
+
+    // 6. Prevent duplicate processing
+    if (payment.status === "Successful") {
+      res.status(200).json({
+        success: true,
+        message: "Payment already processed",
+      });
+      return;
+    }
+
+    if (payment.status !== "Pending") {
+      res.status(200).json({
+        success: true,
+        message: "Payment is no longer pending",
+      });
+      return;
+    }
+
+    // 7. Verify the transaction directly with Chapa
+    const chapaSecretKey = process.env.CHAPA_SECRET_KEY;
+
+    if (!chapaSecretKey) {
+      res.status(500).json({
+        success: false,
+        message: "Chapa configuration is missing",
+      });
+      return;
+    }
+
+    const chapaResponse = await axios.get(
+      `https://api.chapa.co/v1/transaction/verify/${encodeURIComponent(tx_ref)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${chapaSecretKey}`,
+        },
+      }
+    );
+
+    const chapaData = chapaResponse.data?.data;
+
+    // 8. Validate the verified transaction
+    if (
+      !chapaData ||
+      chapaData.tx_ref !== payment.transactionReference ||
+      Number(chapaData.amount) !== payment.amount ||
+      chapaData.currency !== payment.currency ||
+      String(chapaData.status).toLowerCase() !== "success"
+    ) {
+      res.status(400).json({
+        success: false,
+        message: "Chapa transaction verification failed",
+      });
+      return;
+    }
+
+    // 9. Update payment and order atomically
+    const session = await mongoose.startSession();
+
+    session.startTransaction();
+
+    try {
+      const currentPayment = await Payment.findById(
+        payment._id
+      ).session(session);
+
+      if (!currentPayment) {
+        throw new Error("Payment record not found");
+      }
+
+      // Another request may have processed it already
+      if (currentPayment.status === "Successful") {
+        await session.commitTransaction();
+
+        res.status(200).json({
+          success: true,
+          message: "Payment already processed",
+        });
+        return;
+      }
+
+      if (currentPayment.status !== "Pending") {
+        throw new Error("Payment is no longer pending");
+      }
+
+      const order = await Order.findOne({
+        _id: currentPayment.orderId,
+        buyerId: currentPayment.buyerId,
+      }).session(session);
+
+      if (!order) {
+        throw new Error("Associated order not found");
+      }
+
+      if (
+        order.status !== "Pending" &&
+        order.status !== "Confirmed"
+      ) {
+        throw new Error("Order cannot be confirmed");
+      }
+
+      currentPayment.status = "Successful";
+      currentPayment.paidAt = new Date();
+
+      if (chapaData.reference) {
+        currentPayment.providerReference =
+          chapaData.reference;
+      }
+
+      order.status = "Confirmed";
+
+      await currentPayment.save({ session });
+      await order.save({ session });
+
+      await session.commitTransaction();
+
+      res.status(200).json({
+        success: true,
+        message: "Chapa webhook processed successfully",
+        data: {
+          paymentStatus: currentPayment.status,
+          orderStatus: order.status,
+        },
+      });
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  } catch (error) {
+    console.error("Chapa webhook error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to process Chapa webhook",
+    });
+  }
+};
+
 
 
 

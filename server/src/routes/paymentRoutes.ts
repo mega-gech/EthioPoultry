@@ -5,7 +5,8 @@ import {
   simulatePayment,
   getMyPayments,
   initializeChapaPayment,
-  verifyChapaPayment
+  verifyChapaPayment,
+  chapaWebhook
 } from "../controllers/paymentController.js";
 
 const router = Router();
@@ -15,5 +16,6 @@ router.post("/simulate", authMiddleWare, simulatePayment);
 router.get("/my-payments", authMiddleWare, getMyPayments);
 router.post("/chapa/initialize",authMiddleWare,initializeChapaPayment);
 router.post("/chapa/verify/:paymentId", authMiddleWare, verifyChapaPayment);
+router.post("/chapa/webhook", chapaWebhook);
 
 export default router;
