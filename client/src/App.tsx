@@ -12,7 +12,7 @@ import DashboardLayout from "./layout/DashboardLayout";
 import type { DashboardMenuItem } from "./components/dashboard/Sidebar";
 import { useAuth } from "./context/AuthContext";
 
-import {   Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import Home from "./pages/Home";
 import Products from './pages/Products';
 import ProductDetails from './pages/ProductDetails';

@@ -41,6 +41,12 @@ app.use(
 );
 
 app.use(cookieParser());
+
+app.use(
+  "/api/payments/chapa/webhook",
+  express.raw({ type: "application/json" })
+);
+
 app.use(express.json({limit:"10mb"}))
 app.use("/api/products", productRoutes);
 app.use("/api/sellers", sellerRoutes);

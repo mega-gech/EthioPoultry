@@ -412,6 +412,11 @@ const chapaResponse = await axios.get(
   }
 );
 
+console.log(
+  "Chapa verification response:",
+  JSON.stringify(chapaResponse.data, null, 2)
+);
+
 const chapaData = chapaResponse.data.data;
 
 
@@ -428,24 +433,43 @@ if (
   return;
 }
 
+
 const chapaStatus = String(chapaData.status).toLowerCase();
 
 if (chapaStatus !== "success") {
-  if (chapaStatus === "failed") {
+  const failedStatuses = [
+    "failed",
+    "cancelled",
+    "canceled",
+    "failed/cancelled",
+  ];
+
+  if (failedStatuses.includes(chapaStatus)) {
     payment.status = "Failed";
+
+    if (chapaData.reference) {
+      payment.providerReference = chapaData.reference;
+    }
+
     await payment.save();
+
+    res.status(200).json({
+      success: false,
+      message: "Chapa payment failed or was cancelled",
+      payment,
+    });
+    return;
   }
 
   res.status(200).json({
     success: false,
-    message:
-      chapaStatus === "failed"
-        ? "Chapa payment failed"
-        : "Payment is not successful yet",
+    message: "Payment is not successful yet",
     payment,
   });
   return;
 }
+
+
 
 const session = await mongoose.startSession();
 
