@@ -208,16 +208,23 @@ export const chapaWebhook = async (
     }
 
     // 4. Initially process successful payment events only
-    if (
-      eventType !== "charge.success" ||
-      String(status).toLowerCase() !== "success"
-    ) {
-      res.status(200).json({
-        success: true,
-        message: "Webhook event acknowledged",
-      });
-      return;
-    }
+    const paymentStatus = String(status).toLowerCase();
+
+const isSuccessfulEvent =
+  eventType === "charge.success" &&
+  paymentStatus === "success";
+
+const isFailedEvent =
+  eventType === "charge.failed/cancelled" &&
+  paymentStatus === "failed/cancelled";
+
+if (!isSuccessfulEvent && !isFailedEvent) {
+  res.status(200).json({
+    success: true,
+    message: "Webhook event acknowledged",
+  });
+  return;
+}
 
     // 5. Find the corresponding Chapa payment
     const payment = await Payment.findOne({
@@ -273,19 +280,73 @@ export const chapaWebhook = async (
     const chapaData = chapaResponse.data?.data;
 
     // 8. Validate the verified transaction
-    if (
-      !chapaData ||
-      chapaData.tx_ref !== payment.transactionReference ||
-      Number(chapaData.amount) !== payment.amount ||
-      chapaData.currency !== payment.currency ||
-      String(chapaData.status).toLowerCase() !== "success"
-    ) {
-      res.status(400).json({
-        success: false,
-        message: "Chapa transaction verification failed",
-      });
-      return;
-    }
+    const verifiedStatus = String(chapaData?.status).toLowerCase();
+
+// 1. Validate the transaction details
+if (
+  !chapaData ||
+  chapaData.tx_ref !== payment.transactionReference ||
+  Number(chapaData.amount) !== payment.amount ||
+  chapaData.currency !== payment.currency
+) {
+  res.status(400).json({
+    success: false,
+    message: "Chapa transaction details do not match",
+  });
+  return;
+}
+
+// 2. Handle verified failed or cancelled payments
+if (isFailedEvent) {
+  const failedStatuses = [
+    "failed",
+    "cancelled",
+    "canceled",
+    "failed/cancelled",
+  ];
+
+  if (!failedStatuses.includes(verifiedStatus)) {
+    res.status(400).json({
+      success: false,
+      message: "Chapa has not confirmed this payment failure",
+    });
+    return;
+  }
+
+  const failedPayment = await Payment.findOneAndUpdate(
+    {
+      _id: payment._id,
+      status: "Pending",
+    },
+    {
+      $set: {
+        status: "Failed",
+        ...(chapaData.reference
+          ? { providerReference: chapaData.reference }
+          : {}),
+      },
+    },
+    { new: true }
+  );
+
+  res.status(200).json({
+    success: true,
+    message: failedPayment
+      ? "Failed payment webhook processed"
+      : "Payment was already processed",
+  });
+
+  return;
+}
+
+// 3. Continue only if Chapa confirms success
+if (verifiedStatus !== "success") {
+  res.status(400).json({
+    success: false,
+    message: "Chapa transaction is not successful",
+  });
+  return;
+}
 
     // 9. Update payment and order atomically
     const session = await mongoose.startSession();
