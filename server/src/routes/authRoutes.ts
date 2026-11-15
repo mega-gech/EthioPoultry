@@ -11,6 +11,8 @@ import {
 import { authMiddleWare } from "../middleware/authMiddleware.js";
 import passport from "passport";
 
+const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
+
 const router = Router();
 
 router.post("/register", register);
@@ -28,21 +30,21 @@ router.get(
 router.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: "http://localhost:5173/login",
+    failureRedirect: `${frontendUrl}/login`,
     session: false,
   }),
   (req, res) => {
-   if (!req.user) {
-    res.redirect("http://localhost:5173/login");
-    return;
+    if (!req.user) {
+      res.redirect(`${frontendUrl}/login`);
+      return;
+    }
+
+    const token = createToken(req.user.userId);
+
+    setAuthCookie(res, token);
+
+    res.redirect(`${frontendUrl}/auth/google/callback`);
   }
-
-  const token = createToken(req.user.userId);
-
-  setAuthCookie(res, token);
-
-  res.redirect("http://localhost:5173/auth/google/callback");
-}
 );
 
 export default router;
