@@ -6,6 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import { apiUrl } from "../config";
 
 export type AuthUser = {
   id: string;
@@ -30,59 +31,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
- 
-    const refreshUser = useCallback(async (): Promise<AuthUser | null> => {
+  const refreshUser = useCallback(async (): Promise<AuthUser | null> => {
     try {
-    const response = await fetch(
-      "http://localhost:5000/api/auth/me",
-      {
+      const response = await fetch(apiUrl("/api/auth/me"), {
         credentials: "include",
-      }
-    );
+      });
 
-    if (!response.ok) {
+      if (!response.ok) {
+        setUser(null);
+        return null;
+      }
+
+      const data = await response.json();
+      const currentUser: AuthUser | null = data.user ?? null;
+
+      setUser(currentUser);
+      return currentUser;
+    } catch {
       setUser(null);
       return null;
     }
+  }, []);
 
-    const data = await response.json();
-    const currentUser: AuthUser | null = data.user ?? null;
-
-    setUser(currentUser);
-
-    return currentUser;
-  } catch {
-    setUser(null);
-    return null;
-  }
- }, []);
-
- const logout = useCallback(async (): Promise<void> => {
-  try {
-    await fetch("http://localhost:5000/api/auth/logout", {
-      method: "POST",
-      credentials: "include",
-    });
-  } finally {
-    // Clear the shared user state even if the request fails.
-    setUser(null);
-  }
-}, []);
+  const logout = useCallback(async (): Promise<void> => {
+    try {
+      await fetch(apiUrl("/api/auth/logout"), {
+        method: "POST",
+        credentials: "include",
+      });
+    } finally {
+      setUser(null);
+    }
+  }, []);
 
   useEffect(() => {
-  const loadCurrentUser = async () => {
-    try {
-      await refreshUser();
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    const loadCurrentUser = async () => {
+      try {
+        await refreshUser();
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  loadCurrentUser();
-}, [refreshUser]);
+    void loadCurrentUser();
+  }, [refreshUser]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, refreshUser ,logout}}>
+    <AuthContext.Provider value={{ user, isLoading, refreshUser, logout }}>
       {children}
     </AuthContext.Provider>
   );
