@@ -22,17 +22,22 @@ dotenv.config();
 
 const app = express();
 const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
-const allowedOrigins = [
-  frontendUrl,
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-].filter(Boolean) as string[];
+const allowedOrigins = new Set([frontendUrl]);
+if (process.env.NODE_ENV !== "production") {
+  allowedOrigins.add("http://localhost:5173");
+  allowedOrigins.add("http://127.0.0.1:5173");
+}
+const sessionSecret = process.env.SESSION_SECRET;
+
+if (!sessionSecret) {
+  throw new Error("SESSION_SECRET is required");
+}
 
 configurePassport();
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "development-secret",
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
   })
@@ -43,7 +48,7 @@ app.use(passport.initialize());
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.has(origin)) {
         callback(null, true);
         return;
       }

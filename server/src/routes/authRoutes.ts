@@ -11,8 +11,6 @@ import {
 import { authMiddleWare } from "../middleware/authMiddleware.js";
 import passport from "passport";
 
-const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
-
 const router = Router();
 
 router.post("/register", register);
@@ -29,21 +27,29 @@ router.get(
 
 router.get(
   "/google/callback",
-  passport.authenticate("google", {
-    failureRedirect: `${frontendUrl}/login`,
-    session: false,
-  }),
-  (req, res) => {
-    if (!req.user) {
-      res.redirect(`${frontendUrl}/login`);
-      return;
-    }
+  (req, res, next) => {
+    const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
 
-    const token = createToken(req.user.userId);
+    passport.authenticate("google", { session: false }, (error, user) => {
+      if (error) {
+        next(error);
+        return;
+      }
 
-    setAuthCookie(res, token);
+      if (
+        !user ||
+        typeof user !== "object" ||
+        !("userId" in user) ||
+        typeof user.userId !== "string"
+      ) {
+        res.redirect(`${frontendUrl}/login`);
+        return;
+      }
 
-    res.redirect(`${frontendUrl}/auth/google/callback`);
+      const token = createToken(user.userId);
+      setAuthCookie(res, token);
+      res.redirect(`${frontendUrl}/auth/google/callback`);
+    })(req, res, next);
   }
 );
 
