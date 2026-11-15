@@ -22,7 +22,6 @@ type SidebarProps = {
   onLogout: () => void;
 };
 
-
 export default function Sidebar({
   role,
   menuItems,
@@ -48,11 +47,11 @@ export default function Sidebar({
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col
           bg-emerald-950 text-white transition-transform duration-300
-          md:static md:min-h-screen md:w-60 md:shrink-0 md:translate-x-0
+          md:sticky md:inset-y-auto md:top-0 md:h-screen md:w-60 md:shrink-0 md:translate-x-0
           ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-5">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-5 py-5">
           <Link to="/" className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-700">
               <Egg size={24} />
@@ -76,8 +75,8 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
+        {/* Navigation (scrolls internally only if the menu is too tall) */}
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-5">
           <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-emerald-300">
             Menu
           </p>
@@ -118,7 +117,7 @@ export default function Sidebar({
         </nav>
 
         {/* User information */}
-        <div className="border-t border-white/10 px-5 py-4">
+        <div className="shrink-0 border-t border-white/10 px-5 py-4">
           <div className="mb-3 flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-700 font-bold">
               {userName.charAt(0).toUpperCase()}
