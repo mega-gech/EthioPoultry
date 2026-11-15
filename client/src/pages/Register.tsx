@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 
 import logoHen from "../assets/logo_hen.jpg";
+import { apiUrl } from "../config";
+import { useAuth } from "../context/AuthContext";
 
 type AccountRole = "buyer" | "seller";
 
@@ -29,7 +31,8 @@ type RegisterFormData = {
 export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+  const { refreshUser } = useAuth();
 
   const [formData, setFormData] = useState<RegisterFormData>({
     fullName: "",
@@ -98,49 +101,52 @@ export default function Register() {
       setError("Please agree to the Terms of Service and Privacy Policy.");
       return;
     }
-      
-   setIsSubmitting(true);
 
-   try {
-      const response = await fetch(
-      "http://localhost:5000/api/auth/register",
-      {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: fullName,
-        email,
-        phone: formData.phone.trim(),
-        role: formData.role,
-        password: formData.password,
-      }),
-     }
-     );
+    setIsSubmitting(true);
 
-     const data = await response.json();
+    try {
+      const response = await fetch(apiUrl("/api/auth/register"), {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: fullName,
+          email,
+          phone: formData.phone.trim(),
+          role: formData.role,
+          password: formData.password,
+        }),
+      });
 
-     if (!response.ok) {
-     setError(data.message || "Registration failed.");
-     return;
-     }
+      const data = await response.json();
 
-  if (data.user.role === "seller") {
-  navigate("/seller/dashboard");
- } else if (data.user.role === "buyer") {
-  navigate("/buyer/dashboard");
- } else {
-  navigate("/");
- }
+      if (!response.ok) {
+        setError(data.message || "Registration failed.");
+        return;
+      }
 
- } catch (error) {
-  setError("Unable to connect to the server. Please try again.");
- } finally {
-  setIsSubmitting(false);
- }
-}
+      const currentUser = await refreshUser();
+
+      if (!currentUser) {
+        setError("Registration succeeded, but we could not verify your session.");
+        return;
+      }
+
+      if (currentUser.role === "seller") {
+        navigate("/seller/dashboard");
+      } else if (currentUser.role === "buyer") {
+        navigate("/buyer/dashboard");
+      } else {
+        navigate("/");
+      }
+    } catch {
+      setError("Unable to connect to the server. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const inputClass =
     "w-full rounded-lg border border-gray-300 bg-white py-3 pl-11 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-400 focus:border-green-600 focus:ring-4 focus:ring-green-100";
