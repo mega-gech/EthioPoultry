@@ -18,7 +18,9 @@ export interface Notification {
   updatedAt: string;
 }
 
-const API_URL = "/api";
+import { apiUrl } from "../config";
+
+const API_URL = apiUrl("/api");
 
 interface NotificationsResponse {
   success: boolean;

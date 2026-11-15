@@ -21,6 +21,10 @@ import cookieParser from "cookie-parser";
 dotenv.config();
 
 const app = express();
+if (process.env.NODE_ENV === "production" && !process.env.FRONTEND_URL) {
+  throw new Error("FRONTEND_URL is required in production");
+}
+
 const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
 const allowedOrigins = new Set([frontendUrl]);
 if (process.env.NODE_ENV !== "production") {

@@ -1,5 +1,7 @@
 
-export const API_URL = "/api";
+import { apiUrl } from "../config";
+
+export const API_URL = apiUrl("/api");
 
 
 

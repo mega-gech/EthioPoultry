@@ -1,5 +1,7 @@
 
-const API_URL = "/api";
+import { apiUrl } from "../config";
+
+const API_URL = apiUrl("/api");
 
 export type PaymentStatus =
   | "Pending"
