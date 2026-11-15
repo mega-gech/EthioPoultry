@@ -857,6 +857,14 @@ export const simulatePayment = async (
   res: Response
 ): Promise<void> => {
   try {
+    if (process.env.NODE_ENV === "production") {
+      res.status(404).json({
+        success: false,
+        message: "Not found",
+      });
+      return;
+    }
+
     const userId = req.user?.userId;
 
     if (!userId || req.user?.role !== "buyer") {

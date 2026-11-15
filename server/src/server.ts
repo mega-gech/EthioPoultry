@@ -13,6 +13,7 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 
 import session from "express-session";
+import MongoStore from "connect-mongo";
 import passport from "passport";
 import { configurePassport } from "./config/passport.js";
 
@@ -32,9 +33,18 @@ if (process.env.NODE_ENV !== "production") {
   allowedOrigins.add("http://127.0.0.1:5173");
 }
 const sessionSecret = process.env.SESSION_SECRET;
+const mongoUri = process.env.MONGO_URI;
 
 if (!sessionSecret) {
   throw new Error("SESSION_SECRET is required");
+}
+
+if (!mongoUri) {
+  throw new Error("MONGO_URI is required");
+}
+
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
 }
 
 configurePassport();
@@ -42,8 +52,19 @@ configurePassport();
 app.use(
   session({
     secret: sessionSecret,
+    store: MongoStore.create({
+      mongoUrl: mongoUri,
+      collectionName: "sessions",
+      ttl: 24 * 60 * 60,
+    }),
     resave: false,
     saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000,
+    },
   })
 );
 
