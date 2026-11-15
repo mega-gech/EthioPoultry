@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import logoHen from "../assets/logo_hen.jpg";
+import { apiUrl } from "../config";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -40,9 +41,7 @@ export default function Login() {
 
     try
     {
-     const response = await fetch(
-    "http://localhost:5000/api/auth/login",
-    {
+     const response = await fetch(apiUrl("/api/auth/login"), {
       method: "POST",
       credentials: "include",
       headers: {
@@ -52,8 +51,7 @@ export default function Login() {
         email: email.trim(),
         password: password,
       }),
-    }
-  );
+    });
 
   const data = await response.json();
 
@@ -82,7 +80,7 @@ if (currentUser.role === "seller") {
   navigate("/");
 }
 
- } catch (error) {
+ } catch {
   setError("Unable to connect to the server. Please try again.");
 }
 };
@@ -314,8 +312,7 @@ if (currentUser.role === "seller") {
   <button
     type="button"
     onClick={() => {
-      window.location.href =
-        "http://localhost:5000/api/auth/google";
+      window.location.href = apiUrl("/api/auth/google");
     }}
     className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
   >
