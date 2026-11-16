@@ -9,6 +9,7 @@ export interface IUser extends Document {
   role: "buyer" | "seller" | "admin";
   location?: string;
   phone?: string;
+  favorites: mongoose.Types.ObjectId[];
 }
 
 const userSchema = new Schema<IUser>(
@@ -53,6 +54,10 @@ const userSchema = new Schema<IUser>(
     phone: {
       type: String,
       trim: true,
+    },
+    favorites: {
+      type: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+      default: [],
     },
   },
   {
