@@ -4,13 +4,14 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ImagePlus } from "lucide-react";
 import {
   getProductById,
-  updateProductById,
   type SellerProduct
 } from "../../services/sellerService";
+import { useProducts } from "../../context/ProductContext";
 
 export default function EditProduct() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { updateProduct } = useProducts();
   const [product, setProduct] = useState<SellerProduct | null>(null);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
@@ -152,7 +153,7 @@ if (
       ? await fileToDataUrl(image)
       : product.image;
 
-    await updateProductById(id, {
+    await updateProduct(id, {
       name: name.trim(),
       description: description.trim(),
       price: Number(price),
