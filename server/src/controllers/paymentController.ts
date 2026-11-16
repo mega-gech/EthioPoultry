@@ -9,7 +9,7 @@ import {
 } from "crypto";
 
 import User from "../models/User.js";
-import Payment from "../models/Payment.js";
+import Payment, { type IPayment } from "../models/Payment.js";
 import Order from "../models/Order.js";
 
 
@@ -55,6 +55,113 @@ const verifyChapaSignature = (
     );
   } catch {
     return false;
+  }
+};
+
+type PaymentSettlement =
+  | {
+      kind: "settled" | "already_settled";
+      payment: IPayment;
+      orderStatus: string;
+    }
+  | {
+      kind: "not_pending";
+      payment: IPayment | null;
+    };
+
+const isDuplicateKeyError = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  error.code === 11000;
+
+const settleSuccessfulPayment = async (
+  paymentId: string,
+  buyerId: string,
+  method: "Chapa" | "Simulated",
+  providerReference?: string
+): Promise<PaymentSettlement> => {
+  const session = await mongoose.startSession();
+  let settlement: PaymentSettlement | undefined;
+
+  try {
+    await session.withTransaction(async () => {
+      const payment = await Payment.findOneAndUpdate(
+        {
+          _id: paymentId,
+          buyerId,
+          method,
+          status: "Pending",
+        },
+        {
+          $set: {
+            status: "Successful",
+            paidAt: new Date(),
+            ...(providerReference ? { providerReference } : {}),
+          },
+        },
+        { new: true, session }
+      );
+
+      if (!payment) {
+        const currentPayment = await Payment.findOne({
+          _id: paymentId,
+          buyerId,
+          method,
+        }).session(session);
+
+        if (currentPayment?.status === "Successful") {
+          const currentOrder = await Order.findById(
+            currentPayment.orderId
+          ).session(session);
+
+          if (!currentOrder) {
+            throw new Error("Associated order not found");
+          }
+
+          settlement = {
+            kind: "already_settled",
+            payment: currentPayment,
+            orderStatus: currentOrder.status,
+          };
+          return;
+        }
+
+        settlement = {
+          kind: "not_pending",
+          payment: currentPayment,
+        };
+        return;
+      }
+
+      const order = await Order.findOneAndUpdate(
+        {
+          _id: payment.orderId,
+          buyerId,
+          status: "Pending",
+        },
+        { $set: { status: "Confirmed" } },
+        { new: true, session }
+      );
+
+      if (!order) {
+        throw new Error("Associated order is no longer pending");
+      }
+
+      settlement = {
+        kind: "settled",
+        payment,
+        orderStatus: order.status,
+      };
+    });
+
+    if (!settlement) {
+      throw new Error("Payment settlement completed without a result");
+    }
+
+    return settlement;
+  } finally {
+    await session.endSession();
   }
 };
 
@@ -153,9 +260,11 @@ res.status(201).json({
   } catch (error) {
     console.error("create payment error:", error);
 
-    res.status(500).json({
+    res.status(isDuplicateKeyError(error) ? 409 : 500).json({
       success: false,
-      message: "Failed to create payment",
+      message: isDuplicateKeyError(error)
+        ? "A payment attempt is already pending for this order"
+        : "Failed to create payment",
     });
   }
 };
@@ -215,8 +324,12 @@ const isSuccessfulEvent =
   paymentStatus === "success";
 
 const isFailedEvent =
-  eventType === "charge.failed/cancelled" &&
-  paymentStatus === "failed/cancelled";
+  ["charge.failed", "charge.cancelled", "charge.failed/cancelled"].includes(
+    eventType
+  ) &&
+  ["failed", "cancelled", "canceled", "failed/cancelled"].includes(
+    paymentStatus
+  );
 
 if (!isSuccessfulEvent && !isFailedEvent) {
   res.status(200).json({
@@ -316,6 +429,7 @@ if (isFailedEvent) {
   const failedPayment = await Payment.findOneAndUpdate(
     {
       _id: payment._id,
+      method: "Chapa",
       status: "Pending",
     },
     {
@@ -348,80 +462,25 @@ if (verifiedStatus !== "success") {
   return;
 }
 
-    // 9. Update payment and order atomically
-    const session = await mongoose.startSession();
+    const settlement = await settleSuccessfulPayment(
+      payment.id,
+      payment.buyerId.toString(),
+      "Chapa",
+      chapaData.reference
+    );
 
-    session.startTransaction();
-
-    try {
-      const currentPayment = await Payment.findById(
-        payment._id
-      ).session(session);
-
-      if (!currentPayment) {
-        throw new Error("Payment record not found");
-      }
-
-      // Another request may have processed it already
-      if (currentPayment.status === "Successful") {
-        await session.commitTransaction();
-
-        res.status(200).json({
-          success: true,
-          message: "Payment already processed",
-        });
-        return;
-      }
-
-      if (currentPayment.status !== "Pending") {
-        throw new Error("Payment is no longer pending");
-      }
-
-      const order = await Order.findOne({
-        _id: currentPayment.orderId,
-        buyerId: currentPayment.buyerId,
-      }).session(session);
-
-      if (!order) {
-        throw new Error("Associated order not found");
-      }
-
-      if (
-        order.status !== "Pending" &&
-        order.status !== "Confirmed"
-      ) {
-        throw new Error("Order cannot be confirmed");
-      }
-
-      currentPayment.status = "Successful";
-      currentPayment.paidAt = new Date();
-
-      if (chapaData.reference) {
-        currentPayment.providerReference =
-          chapaData.reference;
-      }
-
-      order.status = "Confirmed";
-
-      await currentPayment.save({ session });
-      await order.save({ session });
-
-      await session.commitTransaction();
-
-      res.status(200).json({
-        success: true,
-        message: "Chapa webhook processed successfully",
-        data: {
-          paymentStatus: currentPayment.status,
-          orderStatus: order.status,
-        },
-      });
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      await session.endSession();
-    }
+    res.status(200).json({
+      success: true,
+      message:
+        settlement.kind === "settled"
+          ? "Chapa webhook processed successfully"
+          : "Payment already processed or no longer pending",
+      data: {
+        paymentStatus: settlement.payment?.status,
+        orderStatus:
+          "orderStatus" in settlement ? settlement.orderStatus : undefined,
+      },
+    });
   } catch (error) {
     console.error("Chapa webhook error:", error);
 
@@ -655,9 +714,11 @@ const chapaResponse = await fetch(
   } catch (error) {
     console.error("Chapa initialization error:", error);
 
-    res.status(500).json({
+    res.status(isDuplicateKeyError(error) ? 409 : 500).json({
       success: false,
-      message: "Failed to initialize Chapa payment",
+      message: isDuplicateKeyError(error)
+        ? "A payment attempt is already being initialized"
+        : "Failed to initialize Chapa payment",
     });
   }
 };
@@ -728,17 +789,12 @@ if (!chapaSecretKey) {
 }
 
 const chapaResponse = await axios.get(
-  `https://api.chapa.co/v1/transaction/verify/${payment.transactionReference}`,
+  `https://api.chapa.co/v1/transaction/verify/${encodeURIComponent(payment.transactionReference)}`,
   {
     headers: {
       Authorization: `Bearer ${chapaSecretKey}`,
     },
   }
-);
-
-console.log(
-  "Chapa verification response:",
-  JSON.stringify(chapaResponse.data, null, 2)
 );
 
 const chapaData = chapaResponse.data.data;
@@ -769,18 +825,34 @@ if (chapaStatus !== "success") {
   ];
 
   if (failedStatuses.includes(chapaStatus)) {
-    payment.status = "Failed";
+    const failedPayment = await Payment.findOneAndUpdate(
+      {
+        _id: payment._id,
+        buyerId: userId,
+        method: "Chapa",
+        status: "Pending",
+      },
+      {
+        $set: {
+          status: "Failed",
+          ...(chapaData.reference
+            ? { providerReference: chapaData.reference }
+            : {}),
+        },
+      },
+      { new: true }
+    );
 
-    if (chapaData.reference) {
-      payment.providerReference = chapaData.reference;
-    }
-
-    await payment.save();
+    const currentPayment =
+      failedPayment ??
+      (await Payment.findOne({ _id: payment._id, buyerId: userId }));
 
     res.status(200).json({
       success: false,
-      message: "Chapa payment failed or was cancelled",
-      payment,
+      message: failedPayment
+        ? "Chapa payment failed or was cancelled"
+        : "Payment status changed while verification was in progress",
+      payment: currentPayment,
     });
     return;
   }
@@ -795,50 +867,33 @@ if (chapaStatus !== "success") {
 
 
 
-const session = await mongoose.startSession();
+const settlement = await settleSuccessfulPayment(
+  payment.id,
+  userId,
+  "Chapa",
+  chapaData.reference
+);
 
-session.startTransaction();
-
-try {
-  payment.status = "Successful";
-  payment.paidAt = new Date();
-
-  if (chapaData.reference) {
-    payment.providerReference = chapaData.reference;
-  }
-
-  await payment.save({ session });
-
-  const order = await Order.findOne({
-    _id: payment.orderId,
-    buyerId: userId,
-    status: "Pending",
-  }).session(session);
-
-  if (!order) {
-    throw new Error("Order not found or is no longer pending");
-  }
-
-  order.status = "Confirmed";
-
-  await order.save({ session });
-
-  await session.commitTransaction();
-
-  res.status(200).json({
-    success: true,
-    message: "Chapa payment verified successfully",
-    data: {
-      payment,
-      orderStatus: "Confirmed",
-    },
+if (settlement.kind === "not_pending") {
+  res.status(409).json({
+    success: false,
+    message: "Payment status changed while verification was in progress",
+    payment: settlement.payment,
   });
-} catch (error) {
-  await session.abortTransaction();
-  throw error;
-} finally {
-  await session.endSession();
+  return;
 }
+
+res.status(200).json({
+  success: true,
+  message:
+    settlement.kind === "already_settled"
+      ? "Payment has already been verified"
+      : "Chapa payment verified successfully",
+  data: {
+    payment: settlement.payment,
+    orderStatus: settlement.orderStatus,
+  },
+});
 
   } catch (error) {
     console.error("Chapa verification error:", error);
@@ -893,72 +948,70 @@ export const simulatePayment = async (
       return;
     }
 
-   const payment = await Payment.findOne({
-  _id: paymentId,
-  buyerId: userId,
-});
+    if (result === "Successful") {
+      const settlement = await settleSuccessfulPayment(
+        paymentId,
+        userId,
+        "Simulated"
+      );
 
-if (!payment) {
-  res.status(404).json({
-    success: false,
-    message: "Payment not found",
-  });
-  return;
-}
+      if (settlement.kind === "not_pending") {
+        res.status(409).json({
+          success: false,
+          message: "Payment is not pending or has already been processed",
+        });
+        return;
+      }
 
-if (payment.status !== "Pending") {
-  res.status(400).json({
-    success: false,
-    message: "This payment has already been processed",
-  });
-  return;
-}
+      res.status(200).json({
+        success: true,
+        message:
+          settlement.kind === "already_settled"
+            ? "Payment has already been processed"
+            : "Payment successful",
+        data: {
+          payment: settlement.payment,
+          orderStatus: settlement.orderStatus,
+        },
+      });
+      return;
+    }
 
-const session = await mongoose.startSession();
+    const failedPayment = await Payment.findOneAndUpdate(
+      {
+        _id: paymentId,
+        buyerId: userId,
+        method: "Simulated",
+        status: "Pending",
+      },
+      { $set: { status: "Failed" } },
+      { new: true }
+    );
 
-session.startTransaction();
+    if (!failedPayment) {
+      const existingPayment = await Payment.findOne({
+        _id: paymentId,
+        buyerId: userId,
+        method: "Simulated",
+      });
 
-try {
-   payment.status = result;
+      res.status(existingPayment ? 409 : 404).json({
+        success: false,
+        message: existingPayment
+          ? "Payment is not pending or has already been processed"
+          : "Payment not found",
+      });
+      return;
+    }
 
-if (result === "Successful") {
-  payment.paidAt = new Date();
-}
-
-await payment.save({ session });
-
-if (result === "Successful") {
-  const order = await Order.findOne({
-    _id: payment.orderId,
-    buyerId: userId,
-    status: "Pending",
-  }).session(session);
-
-  if (!order) {
-    throw new Error("Order not found or is no longer pending");
-  }
-
-  order.status = "Confirmed";
-
-  await order.save({ session });
-}
-
-await session.commitTransaction();
-
-res.status(200).json({
-  success: true,
-  message: `Payment ${result.toLowerCase()} successfully`,
-  data: {
-    payment,
-    orderStatus: result === "Successful" ? "Confirmed" : "Pending",
-  },
-});
-} catch (error) {
-  await session.abortTransaction();
-  throw error;
-} finally {
-  await session.endSession();
-}
+    res.status(200).json({
+      success: true,
+      message: "Payment failed",
+      data: {
+        payment: failedPayment,
+        orderStatus: "Pending",
+      },
+    });
 
   } catch (error) {
     console.error("simulate payment error:", error);

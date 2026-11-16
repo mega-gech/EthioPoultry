@@ -11,6 +11,7 @@ import sellerOrderStatsRoutes from "./routes/sellerOrderStatsRoutes.js";
 import buyerOrderStatusRoutes from "./routes/buyerOrderStatsRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import Payment from "./models/Payment.js";
 
 import session from "express-session";
 import MongoStore from "connect-mongo";
@@ -112,6 +113,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 await connectDB();
+await Payment.createIndexes();
 
 app.listen(port, () => {
   console.log(`server started;${port}`);

@@ -3,6 +3,12 @@ import mongoose from "mongoose";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 
+const isWriteConflict = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  (("code" in error && error.code === 112) ||
+    ("codeName" in error && error.codeName === "WriteConflict"));
+
 export const createBuyerOrder = async (
   req: Request,
   res: Response
@@ -250,8 +256,27 @@ if (typeof orderId !== "string") {
       return;
     }
 
+    const cancelledOrder = await Order.findOneAndUpdate(
+      {
+        _id: orderId,
+        buyerId: userId,
+        status: "Pending",
+      },
+      { $set: { status: "Cancelled" } },
+      { new: true, session }
+    );
+
+    if (!cancelledOrder) {
+      await session.abortTransaction();
+      res.status(409).json({
+        success: false,
+        message: "Order status changed while cancellation was in progress",
+      });
+      return;
+    }
+
     // Return each ordered quantity to its product's stock
-for (const item of order.items) {
+for (const item of cancelledOrder.items) {
   const product = await Product.findOneAndUpdate(
     { _id: item.productId },
     {
@@ -277,17 +302,13 @@ for (const item of order.items) {
   }
 }
 
-// Mark the order as cancelled in the same transaction
-order.status = "Cancelled";
-await order.save({ session });
-
 // Commit both the stock restoration and order update
 await session.commitTransaction();
 
 res.status(200).json({
   success: true,
   message: "Order cancelled successfully",
-  data: order,
+  data: cancelledOrder,
 });
 
   } catch (error) {
@@ -298,7 +319,9 @@ res.status(200).json({
   }
     res.status(500).json({
       success: false,
-      message: "Failed to cancel order",
+      message: isWriteConflict(error)
+        ? "Order status changed while cancellation was in progress"
+        : "Failed to cancel order",
     });
   } finally{
     await session?.endSession();

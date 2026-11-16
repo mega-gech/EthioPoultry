@@ -88,6 +88,14 @@ providerReference: {
 );
 
 paymentSchema.index({ orderId: 1, createdAt: -1 });
+paymentSchema.index(
+  { orderId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: "Pending" },
+    name: "unique_pending_payment_per_order",
+  }
+);
 
 const Payment = mongoose.model<IPayment>(
   "Payment",
