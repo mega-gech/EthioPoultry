@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { getMyProducts, deleteProductById, type SellerProduct } from "../../services/sellerService"
+import { getMyProducts, type SellerProduct } from "../../services/sellerService";
+import { useProducts } from "../../context/ProductContext";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -17,7 +18,7 @@ type ProductFilter = "All" | "Active" | "Out of Stock";
 
 export default function SellerProducts() {
   const navigate = useNavigate();
-
+  const { deleteProduct } = useProducts();
 
 
   const [products, setProducts] = useState<SellerProduct[]>([]);
@@ -96,7 +97,7 @@ async function handleDelete(id: string) {
   if (!confirmed) return;
 
   try {
-    await deleteProductById(id);
+    await deleteProduct(id);
 
     setProducts((currentProducts) =>
       currentProducts.filter((product) => product._id !== id)
