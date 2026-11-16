@@ -13,8 +13,7 @@ import {
   LoaderCircle,
 } from "lucide-react";
 
-
-import {createProduct} from "../../services/sellerService"
+import { useProducts } from "../../context/ProductContext";
 
 
 type ProductCategory = "Eggs" | "Chickens" | "Equipment" | "Feed";
@@ -50,7 +49,7 @@ function fileToDataUrl(file: File): Promise<string> {
 
 export default function AddProduct() {
   const navigate = useNavigate();
-  
+  const { addProduct } = useProducts();
 
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -127,17 +126,17 @@ export default function AddProduct() {
 
       const imageUrl = await fileToDataUrl(image);
 
-      await createProduct({
-      name: name.trim(),
-     description: description.trim(),
-     price: numericPrice,
-     quantity: `${numericQuantity} ${unit}`,
-     stock: numericStock,
-     category,
-     image: imageUrl,
-    images: [imageUrl],
-    location: location.trim(),
-  });
+      await addProduct({
+        name: name.trim(),
+        description: description.trim(),
+        price: numericPrice,
+        quantity: `${numericQuantity} ${unit}`,
+        stock: numericStock,
+        category,
+        image: imageUrl,
+        images: [imageUrl],
+        location: location.trim(),
+      });
 
       navigate("/seller/products", {
         state: { message: "Product added successfully!" },
