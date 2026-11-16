@@ -26,6 +26,10 @@ export interface CreateProductData {
   location: string;
 }
 
+export interface UpdateProductData extends CreateProductData {
+  status: "Active" | "Out of Stock";
+}
+
 export interface ProductSeller {
   _id: string;
   name: string;
@@ -184,7 +188,9 @@ export async function getMyProducts(): Promise<SellerProduct[]> {
   return result.data;
 }
 
-export async function createProduct(productData:CreateProductData) {
+export async function createProduct(
+  productData: CreateProductData,
+): Promise<SellerProduct> {
     const response = await fetch(`${API_URL}/products`, {
         method: "POST",
         credentials: "include",
@@ -194,12 +200,16 @@ export async function createProduct(productData:CreateProductData) {
         body: JSON.stringify(productData)
     });
 
-    const result = await response.json();
+    const result: {
+      success: boolean;
+      data: SellerProduct;
+      message?: string;
+    } = await response.json();
 
-    if(!response.ok){
+    if (!response.ok || !result.success) {
         throw new Error(result.message || "Failed to create product");
     }
-    return result
+    return result.data;
 }
 
 
@@ -222,19 +232,8 @@ export async function deleteProductById(id: string) {
 
 export async function updateProductById(
   id: string,
-  productData: {
-    name: string;
-    description: string;
-    price: number;
-    quantity: string;
-    stock: number;
-    category: "Eggs" | "Chickens" | "Equipment" | "Feed";
-    image: string;
-    images: string[];
-    location: string;
-    status: "Active" | "Out of Stock";
-  }
-) {
+  productData: UpdateProductData,
+): Promise<SellerProduct> {
   const response = await fetch(`${API_URL}/products/${id}`, {
     method: "PUT",
     credentials: "include",
@@ -244,12 +243,16 @@ export async function updateProductById(
     body: JSON.stringify(productData),
   });
 
-  const result = await response.json();
+  const result: {
+    success: boolean;
+    data: SellerProduct;
+    message?: string;
+  } = await response.json();
 
-  if (!response.ok) {
+  if (!response.ok || !result.success) {
     throw new Error(result.message || "Failed to update product");
   }
 
-  return result;
+  return result.data;
 }
 
