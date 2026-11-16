@@ -6,9 +6,10 @@ The platform aims to make it easier for users to discover poultry products, comp
 
 ## Features
 
-* 🥚 Browse eggs and poultry products
-* 🐔 Discover hens and other poultry products
-* 🔍 Search and explore product listings
+* Browse, search, filter, and sort products loaded from the backend API
+* View product details and seller information from MongoDB
+* Seller product creation, editing, and deletion backed by the API
+* Buyer favorites persisted to the buyer account
 * 📍 Find sellers by location
 * 📱 Responsive design for desktop and mobile devices
 * 🤝 Connect buyers with local farmers and suppliers
@@ -23,27 +24,25 @@ The platform aims to make it easier for users to discover poultry products, comp
 * type script
 * Lucide React icons
 
-**Planned Backend**
+**Backend**
 
 * Node.js
 * Express.js
 * MongoDB
 * Mongoose
+* TypeScript
 
 ## Project Structure
 
 ```text
-HenEthio/
+EthioPoultry/
 ├── client/
-│   ├── public/
 │   └── src/
-│       ├── assets/
-│       ├── components/
-│       ├── pages/
-│       ├── data/
-│       ├── App.jsx
-│       ├── main.jsx
-│       └── index.css
+├── server/
+│   └── src/
+│       ├── controllers/
+│       ├── models/
+│       └── routes/
 ├── .gitignore
 └── README.md
 ```
@@ -61,34 +60,47 @@ HenEthio/
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/mega-gech/HenEthio.git
+   git clone https://github.com/mega-gech/EthioPoultry.git
    ```
 
 2. Navigate to the project folder:
 
    ```bash
-   cd HenEthio
+   cd EthioPoultry
    ```
 
-3. Navigate to the frontend:
+3. Configure the backend environment in `server/.env`. Required variables:
 
    ```bash
-   cd client
+   PORT=5000
+   MONGO_URI=<your MongoDB connection string>
+   JWT_SECRET=<a long random secret>
+   SESSION_SECRET=<a different long random secret>
+   GOOGLE_CLIENT_ID=<your Google OAuth client ID>
+   GOOGLE_CLIENT_SECRET=<your Google OAuth client secret>
+   GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
+   FRONTEND_URL=http://localhost:5173
    ```
 
-4. Install dependencies:
+   Never commit `.env` or use example placeholder values as credentials.
+
+4. Install dependencies and start the backend in one terminal:
 
    ```bash
+   cd server
    npm install
-   ```
-
-5. Start the development server:
-
-   ```bash
    npm run dev
    ```
 
-6. Open the local URL shown in your terminal, usually `http://localhost:5173`.
+5. Install dependencies and start the frontend in a second terminal:
+
+   ```bash
+   cd client
+   npm install
+   npm run dev
+   ```
+
+6. Open the local URL shown in the frontend terminal, usually `http://localhost:5173`.
 
 ## Project Goals
 
@@ -96,7 +108,7 @@ EthioPoultry aims to support Ethiopia's poultry and egg market by improving acce
 
 ## Project Status
 
-🚧 In development. More features, including backend integration and database support, are planned.
+🚧 In development. The public product catalog, seller product management, and buyer favorites use the backend API and MongoDB. Other workflows may still need production hardening and end-to-end testing.
 
 ## Author
 
