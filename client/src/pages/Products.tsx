@@ -3,22 +3,17 @@ import { useNavigate } from "react-router-dom";
 import Topbar from "../components/Topbar";
 import Navbar from "../components/Navbar";
 import {
-  getProducts,
   getStatistics,
-  type SellerProduct,
   type MarketplaceStatistics,
+  type SellerProduct,
 } from "../services/sellerService";
-
-const categories = ["Eggs", "Chickens", "Ducks", "Feed", "Equipment", "Medicine"];
-
-const locations = [
-  "Addis Ababa",
-  "Bahir Dar",
-  "Gondar",
-  "Debre Markos",
-  "Hawassa",
-  "Mekelle",
-];
+import { useProducts } from "../context/ProductContext";
+import { useAuth } from "../context/AuthContext";
+import {
+  addFavorite,
+  getMyFavorites,
+  removeFavorite,
+} from "../services/favoriteService";
 
 const PRICE_MAX = 5000;
 
@@ -147,33 +142,24 @@ function StatIcon({ name }: { name: string }) {
 
 function Products() {
   const navigate = useNavigate();
-  const [products, setProducts] = useState<SellerProduct[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { user } = useAuth();
+  const {
+    products,
+    isLoading: loading,
+    error,
+    refreshProducts,
+  } = useProducts();
+  const categories = [
+    ...new Set(products.map((product) => product.category)),
+  ].sort();
+  const locations = [
+    ...new Set(products.map((product) => product.location).filter(Boolean)),
+  ].sort();
 
   // Marketplace statistics (stats bar)
   const [statisticsData, setStatisticsData] =
     useState<MarketplaceStatistics | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadProducts() {
-      try {
-        setLoading(true);
-        setError("");
-        const data = await getProducts();
-        setProducts(data);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Unable to load products",
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadProducts();
-  }, []);
 
   useEffect(() => {
     getStatistics()
@@ -196,15 +182,81 @@ function Products() {
   const [maxPrice, setMaxPrice] = useState(PRICE_MAX);
   const [sortBy, setSortBy] = useState("newest");
 
-  // Favorite product IDs
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [favoritesLoadedFor, setFavoritesLoadedFor] = useState<string | null>(
+    null,
+  );
+  const [favoriteError, setFavoriteError] = useState("");
+  const [updatingFavoriteIds, setUpdatingFavoriteIds] = useState<string[]>([]);
+  const favoritesLoading =
+    user?.role === "buyer" && favoritesLoadedFor !== user.id;
 
-  const toggleFavorite = (id: string) => {
-    setFavorites((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
-    );
+  useEffect(() => {
+    let cancelled = false;
+
+    if (user?.role !== "buyer") {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    getMyFavorites()
+      .then((favoriteProducts) => {
+        if (!cancelled) {
+          setFavorites(favoriteProducts.map((product) => product._id));
+          setFavoriteError("");
+          setFavoritesLoadedFor(user.id);
+        }
+      })
+      .catch((favoriteLoadError) => {
+        if (!cancelled) {
+          setFavoriteError(
+            favoriteLoadError instanceof Error
+              ? favoriteLoadError.message
+              : "Unable to load your favorites",
+          );
+          setFavoritesLoadedFor(user.id);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.role]);
+
+  const toggleFavorite = async (id: string) => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    if (user.role !== "buyer") {
+      setFavoriteError("Only buyer accounts can save favorite products.");
+      return;
+    }
+
+    if (favoritesLoading || updatingFavoriteIds.includes(id)) return;
+
+    setUpdatingFavoriteIds((current) => [...current, id]);
+    setFavoriteError("");
+
+    try {
+      const isFavorite = favorites.includes(id);
+      if (isFavorite) {
+        await removeFavorite(id);
+        setFavorites((current) => current.filter((item) => item !== id));
+      } else {
+        await addFavorite(id);
+        setFavorites((current) => [...current, id]);
+      }
+    } catch (favoriteUpdateError) {
+      setFavoriteError(
+        favoriteUpdateError instanceof Error
+          ? favoriteUpdateError.message
+          : "Unable to update your favorites",
+      );
+    } finally {
+      setUpdatingFavoriteIds((current) => current.filter((item) => item !== id));
+    }
   };
 
   // Filter and sort products
@@ -334,7 +386,7 @@ function Products() {
             <p className="mt-3 text-sm leading-6 text-red-600">{error}</p>
             <button
               type="button"
-              onClick={() => window.location.reload()}
+              onClick={() => void refreshProducts()}
               className="mt-6 rounded-xl bg-[#0b7a3b] px-5 py-3 text-sm font-semibold text-white hover:bg-[#09662f]"
             >
               Try again
@@ -617,6 +669,14 @@ function Products() {
                 </div>
 
                 {/* Product cards */}
+                {favoriteError && (
+                  <p
+                    role="alert"
+                    className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"
+                  >
+                    {favoriteError}
+                  </p>
+                )}
                 <div
                   id="product-results"
                   className="mt-4 grid scroll-mt-24 grid-cols-1 gap-3 min-[480px]:grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]"
@@ -659,9 +719,13 @@ function Products() {
                           {/* Favorite button */}
                           <button
                             type="button"
+                            disabled={
+                              favoritesLoading ||
+                              updatingFavoriteIds.includes(product._id)
+                            }
                             onClick={(event) => {
                               event.stopPropagation();
-                              toggleFavorite(product._id);
+                              void toggleFavorite(product._id);
                             }}
                             aria-label={
                               isFavorite
@@ -669,7 +733,7 @@ function Products() {
                                 : `Add ${product.name} to favorites`
                             }
                             aria-pressed={isFavorite}
-                            className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full transition ${
+                            className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full transition disabled:cursor-wait disabled:opacity-60 ${
                               isFavorite
                                 ? "bg-white text-red-500 shadow-sm"
                                 : "bg-black/30 text-white hover:bg-white hover:text-red-500"
