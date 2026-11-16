@@ -12,11 +12,11 @@ import {
 } from "lucide-react";
 
 import {
-  getProducts,
   getStatistics,
-  type SellerProduct,
   type MarketplaceStatistics,
+  type SellerProduct,
 } from "../services/sellerService";
+import { useProducts } from "../context/ProductContext";
 
 import eggBasket from "../assets/06_egg_basket.jpg";
 import farmBrochure from "../assets/07_farm_brochure.jpg";
@@ -83,34 +83,16 @@ const promotions = [
 
 function FeaturedProducts() {
   const navigate = useNavigate();
-
-  const [products, setProducts] = useState<SellerProduct[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const {
+    products,
+    isLoading: loading,
+    error,
+    refreshProducts,
+  } = useProducts();
 
   const [statisticsData, setStatisticsData] =
     useState<MarketplaceStatistics | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchProducts() {
-      try {
-        setLoading(true);
-        setError("");
-
-        const data = await getProducts();
-        setProducts(data);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to load products"
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchProducts();
-  }, []);
 
   useEffect(() => {
     getStatistics()
@@ -201,9 +183,16 @@ function FeaturedProducts() {
                 <p className="text-sm text-gray-500">Loading products...</p>
               </div>
             ) : error ? (
-              <p className="py-8 text-center text-sm text-red-600">
-                {error}
-              </p>
+              <div className="py-8 text-center">
+                <p className="text-sm text-red-600">{error}</p>
+                <button
+                  type="button"
+                  onClick={() => void refreshProducts()}
+                  className="mt-2 text-sm font-semibold text-green-800 hover:underline"
+                >
+                  Try again
+                </button>
+              </div>
             ) : displayedProducts.length === 0 ? (
               <p className="rounded-lg border border-dashed border-gray-300 py-10 text-center text-sm text-gray-500">
                 No products available yet.
