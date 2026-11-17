@@ -1,24 +1,23 @@
 
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
 
-  server: {
-    allowedHosts: [
-      "broken-uninvited-handclasp.ngrok-free.dev"
-    ],
+  return {
+    plugins: [react(), tailwindcss()],
 
-    proxy: {
-      "/api": {
-        target: "http://localhost:5000",
-        changeOrigin: true,
+    server: {
+      allowedHosts: ["broken-uninvited-handclasp.ngrok-free.dev"],
+
+      proxy: {
+        "/api": {
+          target: env.VITE_API_PROXY_TARGET || "http://localhost:5000",
+          changeOrigin: true,
+        },
       },
     },
-  },
+  };
 });

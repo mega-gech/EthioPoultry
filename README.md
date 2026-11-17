@@ -80,11 +80,28 @@ EthioPoultry/
    GOOGLE_CLIENT_SECRET=<your Google OAuth client secret>
    GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
    FRONTEND_URL=http://localhost:5173
+   CHAPA_SECRET_KEY=<your Chapa secret key>
+   CHAPA_WEBHOOK_SECRET=<your Chapa webhook secret>
    ```
 
    Never commit `.env` or use example placeholder values as credentials.
 
-4. Install dependencies and start the backend in one terminal:
+4. For local development, the frontend proxies `/api` requests to
+   `http://localhost:5000` by default. To run the API on another local host,
+   set `VITE_API_PROXY_TARGET` in `client/.env.local`, for example:
+
+   ```bash
+   VITE_API_PROXY_TARGET=http://localhost:5001
+   ```
+
+   For a separately hosted frontend and API, set `VITE_API_URL` to the API
+   origin when building the client, for example `https://api.example.com`,
+   and set the backend `FRONTEND_URL` to the deployed frontend origin. The
+   browser cookie policy must also permit that deployment (same-site domains,
+   or secure cross-site cookies when the origins are on different sites).
+   Leave `VITE_API_URL` unset when the frontend and API share an origin.
+
+5. Install dependencies and start the backend in one terminal:
 
    ```bash
    cd server
@@ -92,7 +109,7 @@ EthioPoultry/
    npm run dev
    ```
 
-5. Install dependencies and start the frontend in a second terminal:
+6. Install dependencies and start the frontend in a second terminal:
 
    ```bash
    cd client
@@ -100,7 +117,7 @@ EthioPoultry/
    npm run dev
    ```
 
-6. Open the local URL shown in the frontend terminal, usually `http://localhost:5173`.
+7. Open the local URL shown in the frontend terminal, usually `http://localhost:5173`.
 
 ## Project Goals
 

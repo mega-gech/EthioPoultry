@@ -20,6 +20,7 @@ import passport from "passport";
 import { configurePassport } from "./config/passport.js";
 
 import cookieParser from "cookie-parser";
+import mongoose from "mongoose";
 
 dotenv.config();
 
@@ -104,7 +105,11 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/favorites", favoriteRoutes);
 
-const port = process.env.PORT || 5000;
+const port = process.env.PORT?.trim() ? Number(process.env.PORT) : 5000;
+
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  throw new Error("PORT must be an integer between 1 and 65535");
+}
 
 app.get("/api/health", (_req, res) => {
   res.status(200).json({
@@ -117,6 +122,19 @@ app.get("/api/health", (_req, res) => {
 await connectDB();
 await Payment.createIndexes();
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`server started;${port}`);
+});
+
+server.on("error", (error) => {
+  console.error(`Failed to start server on port ${port}:`, error);
+  void mongoose
+    .disconnect()
+    .catch((disconnectError) => {
+      console.error(
+        "Failed to close MongoDB after server startup error:",
+        disconnectError,
+      );
+    })
+    .finally(() => process.exit(1));
 });
