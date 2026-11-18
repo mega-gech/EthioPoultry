@@ -13,6 +13,8 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import Payment from "./models/Payment.js";
 import favoriteRoutes from "./routes/favoriteRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
 
 import session from "express-session";
 import MongoStore from "connect-mongo";
@@ -104,6 +106,8 @@ app.use("/api/orders", buyerOrderStatusRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/favorites", favoriteRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/reports", reportRoutes);
 
 const port = process.env.PORT?.trim() ? Number(process.env.PORT) : 5000;
 
