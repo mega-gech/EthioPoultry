@@ -1,6 +1,7 @@
 import type {Request, Response} from "express"
 import mongoose from "mongoose"
 import Product from "../models/Product.js"
+import User from "../models/User.js"
 import { notifyBuyersAboutProduct } from "../services/notificationService.js";
 
 export const getProducts = async (
@@ -8,7 +9,17 @@ export const getProducts = async (
     res: Response
 ):Promise<void>=>{
     try {
-        const products = await Product.find().populate("sellerId", "name phone").sort({
+        const activeSellerIds = await User.find({
+            role: "seller",
+            isActive: { $ne: false },
+        }).distinct("_id");
+        const products = await Product.find({
+            sellerId: { $in: activeSellerIds },
+            $or: [
+                { approvalStatus: "Approved" },
+                { approvalStatus: { $exists: false } },
+            ],
+        }).populate("sellerId", "name phone").sort({
             createdAt: -1,
         });
 
@@ -86,7 +97,18 @@ export const getProductById = async(
             return;
         }
 
-        const product = await Product.findById(id).populate("sellerId", "name phone");
+        const activeSellerIds = await User.find({
+            role: "seller",
+            isActive: { $ne: false },
+        }).distinct("_id");
+        const product = await Product.findOne({
+            _id: id,
+            sellerId: { $in: activeSellerIds },
+            $or: [
+                { approvalStatus: "Approved" },
+                { approvalStatus: { $exists: false } },
+            ],
+        }).populate("sellerId", "name phone");
 
         if(!product){
             res.status(404).json({
@@ -176,23 +198,8 @@ export const createProduct = async(
         location,
         sellerId: userId,
         rating,
+        approvalStatus: "Pending",
     })
-
-    // Notify all buyers about the new product
-try {
-    await notifyBuyersAboutProduct({
-        sellerId: userId,
-        productId: product._id,
-        productName: product.name,
-        type: "new_product",
-        eventId: product._id.toString(),
-    });
-} catch (notificationError) {
-    console.error(
-        "Product created, but notification delivery failed:",
-        notificationError
-    );
-}
 
     res.status(201).json({
         success: true,
@@ -322,7 +329,7 @@ if (status !== undefined && stock === undefined) {
 
     // Notify all buyers about the product update
 
-    if (importantFieldsChanged) {
+    if (importantFieldsChanged && product.approvalStatus === "Approved") {
     try {
         await notifyBuyersAboutProduct({
             sellerId: userId,
