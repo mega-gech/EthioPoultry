@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import User from "../models/User.js";
 import Product from "../models/Product.js";
+import type { IProduct } from "../models/Product.js";
 import Order from "../models/Order.js";
 
 export const getStatistics = async (
@@ -8,6 +10,15 @@ export const getStatistics = async (
   res: Response
 ): Promise<void> => {
   try {
+    const activeSellerIds = await User.find({
+      role: "seller",
+      isActive: { $ne: false },
+    }).distinct("_id");
+    const approvedProductFilter: mongoose.QueryFilter<IProduct> = {
+      status: "Active",
+      sellerId: { $in: activeSellerIds },
+      approvalStatus: { $in: ["Approved", null] },
+    };
     const [
       registeredFarmers,
       availableProducts,
@@ -16,10 +27,10 @@ export const getStatistics = async (
     ] = await Promise.all([
       User.countDocuments({ role: "seller" }),
 
-      Product.countDocuments({ status: "Active" }),
+      Product.countDocuments(approvedProductFilter),
 
       Product.distinct("location", {
-        status: "Active",
+        ...approvedProductFilter,
         location: { $nin: ["", null] },
       }),
 
