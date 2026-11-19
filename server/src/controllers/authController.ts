@@ -232,6 +232,14 @@ export const login = async (
             return;
         }
 
+        if (user.isActive === false) {
+            res.status(403).json({
+                success: false,
+                message: "This account has been deactivated.",
+            });
+            return;
+        }
+
         // Google-only accounts do not have an email/password login.
 if (!user.password) {
     res.status(401).json({
