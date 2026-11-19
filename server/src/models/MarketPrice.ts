@@ -10,6 +10,10 @@ export interface IMarketPrice extends Document {
   location: string;
   recordedAt: Date;
   source?: string;
+  status?: "Pending" | "Approved" | "Rejected";
+  submittedBy?: mongoose.Types.ObjectId;
+  reviewedBy?: mongoose.Types.ObjectId;
+  reviewedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -57,6 +61,21 @@ const marketPriceSchema = new Schema<IMarketPrice>(
     source: {
       type: String,
       trim: true,
+    },
+    status: {
+      type: String,
+      enum: ["Pending", "Approved", "Rejected"],
+    },
+    submittedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    reviewedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    reviewedAt: {
+      type: Date,
     },
   },
   {
