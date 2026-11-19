@@ -56,7 +56,7 @@ if (!token) {
 
   const payload = decoded as TokenPayload;
 
-  const user = await User.findById(payload.userId).select("_id role");
+  const user = await User.findById(payload.userId).select("_id role isActive");
 
    if (!user) {
       res.status(401).json({
@@ -64,6 +64,14 @@ if (!token) {
       message: "User account not found",
      });
      return;
+   }
+
+   if (user.isActive === false) {
+      res.status(403).json({
+        success: false,
+        message: "This account has been deactivated.",
+      });
+      return;
    }
 
    req.user = {
@@ -80,4 +88,29 @@ if (!token) {
         })
         return
     }
+
 }
+
+export const requireAdmin = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    res.status(401).json({
+      success: false,
+      message: "Authentication required.",
+    });
+    return;
+  }
+
+  if (req.user.role !== "admin") {
+    res.status(403).json({
+      success: false,
+      message: "Administrator access required.",
+    });
+    return;
+  }
+
+  next();
+};
