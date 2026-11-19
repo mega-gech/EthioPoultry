@@ -10,6 +10,8 @@ The platform aims to make it easier for users to discover poultry products, comp
 * View product details and seller information from MongoDB
 * Seller product creation, editing, and deletion backed by the API
 * Buyer favorites persisted to the buyer account
+* Role-protected admin workspace for platform statistics, user/seller/product/order management, market-price review, reports, and settings
+* Admin review required for new product listings and seller-submitted market prices
 * 📍 Find sellers by location
 * 📱 Responsive design for desktop and mobile devices
 * 🤝 Connect buyers with local farmers and suppliers
@@ -118,6 +120,28 @@ EthioPoultry/
    ```
 
 7. Open the local URL shown in the frontend terminal, usually `http://localhost:5173`.
+
+### Admin access
+
+Public registration does not allow creating administrator accounts. Provision
+the first `admin` account through a trusted, out-of-band database/operations
+process. Admin pages and `/api/admin` endpoints both enforce the administrator
+role; deactivated accounts cannot authenticate. Existing products and market
+price history without a review status remain visible as legacy-approved data.
+
+### Validation
+
+Run the application builds and admin authorization middleware tests with:
+
+```bash
+cd server
+npm test
+npm run build
+
+cd ../client
+npm run build
+npm run lint
+```
 
 ## Project Goals
 
