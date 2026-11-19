@@ -7,6 +7,9 @@ export interface IUser extends Document {
   password?: string;
   googleId?: string;
   role: "buyer" | "seller" | "admin";
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
   location?: string;
   phone?: string;
   favorites: mongoose.Types.ObjectId[];
@@ -43,6 +46,11 @@ const userSchema = new Schema<IUser>(
       type: String,
       enum: ["buyer", "seller", "admin"],
       default: "buyer",
+      required: true,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
       required: true,
     },
 
