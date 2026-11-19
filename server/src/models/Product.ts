@@ -9,6 +9,7 @@ export type ProductCategory =
 
   // Allowed product availability statuses
   export type ProductStatus = "Active" | "Out of Stock";
+  export type ProductApprovalStatus = "Pending" | "Approved" | "Rejected";
 
   // TypeScript definition for a product
 export interface IProduct extends Document {
@@ -25,6 +26,7 @@ export interface IProduct extends Document {
   rating: number;
   reviews: number;
   status: ProductStatus;
+  approvalStatus?: ProductApprovalStatus;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -115,6 +117,10 @@ const productSchema = new Schema<IProduct>(
       type: String,
       enum: ["Active", "Out of Stock"],
       default: "Active",
+    },
+    approvalStatus: {
+      type: String,
+      enum: ["Pending", "Approved", "Rejected"],
     },
   },
   {
