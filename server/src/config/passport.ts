@@ -35,6 +35,12 @@ export const configurePassport = () => {
           let user = await User.findOne({ googleId: profile.id });
 
           if (user) {
+            if (user.isActive === false) {
+              return done(null, false, {
+                message: "This account has been deactivated",
+              });
+            }
+
     return done(null, {
         userId: user._id.toString(),
         role: user.role,
@@ -45,6 +51,12 @@ export const configurePassport = () => {
           user = await User.findOne({ email });
 
           if (user) {
+            if (user.isActive === false) {
+              return done(null, false, {
+                message: "This account has been deactivated",
+              });
+            }
+
             if (user.googleId && user.googleId !== profile.id) {
               return done(null, false, {
                 message: "This email is connected to another Google account",
