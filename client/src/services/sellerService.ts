@@ -51,6 +51,7 @@ export interface SellerProduct {
   rating: number;
   reviews: number;
   status: "Active" | "Out of Stock";
+  approvalStatus?: "Pending" | "Approved" | "Rejected";
   createdAt?: string;
 }
 
