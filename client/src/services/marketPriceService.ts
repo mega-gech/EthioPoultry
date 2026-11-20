@@ -16,6 +16,16 @@ export interface MarketPriceRecord {
   updatedAt: string;
 }
 
+export interface SubmitMarketPriceData {
+  productName: string;
+  category: "Eggs" | "Chickens" | "Equipment" | "Feed";
+  price: number;
+  unit: string;
+  location: string;
+  recordedAt?: string;
+  source?: string;
+}
+
 interface SellerPricesResponse {
   success: boolean;
   count: number;
@@ -72,5 +82,25 @@ export const getMarketPriceHistory = async (
     );
   }
 
+  return result.data;
+};
+
+export const submitMarketPrice = async (
+  data: SubmitMarketPriceData
+): Promise<MarketPriceRecord> => {
+  const response = await fetch(`${API_URL}/market-prices/submissions`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const result: {
+    success: boolean;
+    data: MarketPriceRecord;
+    message?: string;
+  } = await response.json();
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Failed to submit market price.");
+  }
   return result.data;
 };
