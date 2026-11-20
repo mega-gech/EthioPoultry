@@ -53,7 +53,7 @@ export default function Login() {
       }),
     });
 
-  const data = await response.json();
+   const data = await response.json();
 
 
 
@@ -76,6 +76,8 @@ if (currentUser.role === "seller") {
   navigate("/seller/dashboard");
 } else if (currentUser.role === "buyer") {
   navigate("/buyer/dashboard");
+} else if (currentUser.role === "admin") {
+  navigate("/admin/dashboard");
 } else {
   navigate("/");
 }
@@ -201,13 +203,6 @@ if (currentUser.role === "seller") {
                 >
                   Password
                 </label>
-
-                <Link
-                  to="/forgot-password"
-                  className="text-xs font-semibold text-green-700 transition hover:text-green-900 sm:text-sm"
-                >
-                  Forgot password?
-                </Link>
               </div>
 
               <div className="relative">
@@ -249,18 +244,6 @@ if (currentUser.role === "seller") {
               </div>
             </div>
 
-            {/* Remember me */}
-            <label className="flex w-fit cursor-pointer items-center gap-2.5 text-sm text-gray-600">
-              <input
-                type="checkbox"
-                name="rememberMe"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 cursor-pointer rounded border-gray-300 accent-green-600 focus-visible:ring-2 focus-visible:ring-green-500"
-              />
-
-              Remember me
-            </label>
 
             {/* Error message */}
             {error && (
@@ -330,24 +313,6 @@ if (currentUser.role === "seller") {
             >
               Create an account
             </Link>
-          </p>
-
-          {/* Terms */}
-          <p className="mt-6 text-center text-xs leading-5 text-gray-400">
-            By continuing, you agree to our{" "}
-            <Link
-              to="/terms"
-              className="underline underline-offset-2 transition hover:text-green-700"
-            >
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link
-              to="/privacy"
-              className="underline underline-offset-2 transition hover:text-green-700"
-            >
-              Privacy Policy
-            </Link>.
           </p>
 
           {/* Return to homepage */}
