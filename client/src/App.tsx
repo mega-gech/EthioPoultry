@@ -6,6 +6,7 @@ import {
   Package,
   PlusCircle,
   CreditCard,
+  Tag,
 } from "lucide-react";
 
 import DashboardLayout from "./layout/DashboardLayout";
@@ -32,6 +33,18 @@ import MarketPrice from "./pages/MarketPrice"
 import GoogleCallback from "./components/GoogleCallback"
 import BuyerPayments from "./pages/buyerProfile/BuyerPayments";
 import PaymentReturn from "./pages/PaymentReturn"
+import AdminLayout from "./layout/AdminLayout";
+import AdminOverview from "./pages/Admin/AdminOverview";
+import {
+  AdminOrders,
+  AdminProducts,
+  AdminSellers,
+  AdminUsers,
+} from "./pages/Admin/AdminManagement";
+import AdminMarketPrices from "./pages/Admin/AdminMarketPrices";
+import AdminReports from "./pages/Admin/AdminReports";
+import AdminSettings from "./pages/Admin/AdminSettings";
+import SubmitMarketPrice from "./pages/SellerDashboard/SubmitMarketPrice";
 
 const buyerMenuItems: DashboardMenuItem[] = [
   {
@@ -76,6 +89,11 @@ const sellerMenuItems: DashboardMenuItem[] = [
     label: "Add Product",
     to: "/seller/products/add",
     icon: PlusCircle,
+  },
+  {
+    label: "Submit Market Price",
+    to: "/seller/market-prices/submit",
+    icon: Tag,
   },
 ];
 
@@ -137,6 +155,21 @@ function App() {
     <Route path="/seller/products" element={<SellerProducts />} />
     <Route path="/seller/products/add" element={<AddProduct />} />
     <Route path="/seller/products/edit/:id" element={<EditProduct />} />
+    <Route path="/seller/market-prices/submit" element={<SubmitMarketPrice />} />
+  </Route>
+</Route>
+
+{/* Admin-only pages */}
+<Route element={<ProtectedRoute allowedRole="admin" />}>
+  <Route element={<AdminLayout />}>
+    <Route path="/admin/dashboard" element={<AdminOverview />} />
+    <Route path="/admin/users" element={<AdminUsers />} />
+    <Route path="/admin/products" element={<AdminProducts />} />
+    <Route path="/admin/sellers" element={<AdminSellers />} />
+    <Route path="/admin/orders" element={<AdminOrders />} />
+    <Route path="/admin/market-prices" element={<AdminMarketPrices />} />
+    <Route path="/admin/reports" element={<AdminReports />} />
+    <Route path="/admin/settings" element={<AdminSettings />} />
   </Route>
 </Route>
       </Routes>
