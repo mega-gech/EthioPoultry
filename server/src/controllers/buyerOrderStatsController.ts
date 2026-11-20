@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
+import User from "../models/User.js";
 
 const isWriteConflict = (error: unknown): boolean =>
   typeof error === "object" &&
@@ -94,6 +95,21 @@ if (!updatedProduct) {
   res.status(400).json({
     success: false,
     message: "Insufficient stock available",
+  });
+  return;
+}
+
+const activeSeller = await User.exists({
+  _id: updatedProduct.sellerId,
+  role: "seller",
+  isActive: { $ne: false },
+}).session(session);
+
+if (!activeSeller) {
+  await session.abortTransaction();
+  res.status(400).json({
+    success: false,
+    message: "This seller is not currently available.",
   });
   return;
 }
