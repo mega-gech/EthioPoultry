@@ -13,7 +13,7 @@ export type DashboardMenuItem = {
 };
 
 type SidebarProps = {
-  role: "buyer" | "seller";
+  role: "buyer" | "seller" | "admin";
   menuItems: DashboardMenuItem[];
   userName: string;
   userEmail?: string;
@@ -60,7 +60,11 @@ export default function Sidebar({
             <div>
               <h1 className="text-lg font-bold">Enqulale</h1>
               <p className="text-xs text-emerald-200">
-                {role === "buyer" ? "Buyer Center" : "Seller Center"}
+                {role === "buyer"
+                  ? "Buyer Center"
+                  : role === "seller"
+                    ? "Seller Center"
+                    : "Admin Center"}
               </p>
             </div>
           </Link>
