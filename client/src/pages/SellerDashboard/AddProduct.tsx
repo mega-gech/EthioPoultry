@@ -139,7 +139,7 @@ export default function AddProduct() {
       });
 
       navigate("/seller/products", {
-        state: { message: "Product added successfully!" },
+        state: { message: "Product submitted for admin review." },
       });
     } catch(err) {
       setError(
