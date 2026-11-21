@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { getMyProducts, type SellerProduct } from "../../services/sellerService";
 import { useProducts } from "../../context/ProductContext";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Search,
   Plus,
@@ -18,6 +18,7 @@ type ProductFilter = "All" | "Active" | "Out of Stock";
 
 export default function SellerProducts() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { deleteProduct } = useProducts();
 
 
@@ -111,11 +112,17 @@ async function handleDelete(id: string) {
 
 
   const activeCount = products.filter(
-    (product) => product.status === "Active"
+    (product) =>
+      product.status === "Active" &&
+      product.approvalStatus !== "Pending" &&
+      product.approvalStatus !== "Rejected"
   ).length;
 
   const outOfStockCount = products.filter(
     (product) => product.status === "Out of Stock"
+  ).length;
+  const pendingCount = products.filter(
+    (product) => product.approvalStatus === "Pending"
   ).length;
 
    
@@ -141,6 +148,14 @@ async function handleDelete(id: string) {
             <p className="mt-1 text-sm text-gray-500">
               Manage and track your poultry listings.
             </p>
+            {typeof location.state?.message === "string" && (
+              <p
+                role="status"
+                className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800"
+              >
+                {location.state.message}
+              </p>
+            )}
           </div>
 
           <button
@@ -154,7 +169,7 @@ async function handleDelete(id: string) {
         </div>
 
         {/* Summary cards */}
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryCard
             label="All Products"
             value={products.length}
@@ -170,6 +185,11 @@ async function handleDelete(id: string) {
           <SummaryCard
             label="Out of Stock"
             value={outOfStockCount}
+            icon={<Package size={21} />}
+          />
+          <SummaryCard
+            label="Pending Review"
+            value={pendingCount}
             icon={<Package size={21} />}
           />
         </div>
@@ -248,15 +268,27 @@ async function handleDelete(id: string) {
                     </td>
 
                     <td className="px-5 py-4">
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                          product.status === "Active"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        {product.status}
-                      </span>
+                      <div className="flex flex-col items-start gap-1.5">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            product.status === "Active"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {product.status}
+                        </span>
+                        {product.approvalStatus === "Pending" && (
+                          <span className="text-xs font-medium text-amber-700">
+                            Awaiting admin review
+                          </span>
+                        )}
+                        {product.approvalStatus === "Rejected" && (
+                          <span className="text-xs font-medium text-red-700">
+                            Not approved
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     <td className="px-5 py-4">
