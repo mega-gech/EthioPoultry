@@ -3,7 +3,7 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 type ProtectedRouteProps = {
-  allowedRole: "buyer" | "seller";
+  allowedRole: "buyer" | "seller" | "admin";
 };
 
 export default function ProtectedRoute({
