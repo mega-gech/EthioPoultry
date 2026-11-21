@@ -157,6 +157,16 @@ const recentProducts = products.slice(0, 5);
                   >
                     {product.status}
                   </span>
+                  {product.approvalStatus === "Pending" && (
+                    <p className="mt-1 text-xs text-amber-700">
+                      Awaiting admin review
+                    </p>
+                  )}
+                  {product.approvalStatus === "Rejected" && (
+                    <p className="mt-1 text-xs text-red-700">
+                      Not approved
+                    </p>
+                  )}
                 </td>
 
                 {/* Actions */}
