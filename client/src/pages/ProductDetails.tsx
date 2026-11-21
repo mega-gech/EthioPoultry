@@ -5,6 +5,8 @@ import {
   type SellerProduct,
 } from "../services/sellerService";
 import { createBuyerOrder } from "../services/buyerOrderService";
+import { createReport } from "../services/adminService";
+import { useAuth } from "../context/AuthContext";
 
 type TabName = "Description" | "Specifications";
 
@@ -22,6 +24,15 @@ export default function ProductDetails() {
   const [isOrdering, setIsOrdering] = useState(false);
   const [orderMessage, setOrderMessage] = useState("");
   const [orderError, setOrderError] = useState("");
+  const { user } = useAuth();
+  const [reportTarget, setReportTarget] = useState<"product" | "user" | null>(
+    null
+  );
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportMessage, setReportMessage] = useState("");
+  const [reportError, setReportError] = useState("");
+  const [submittingReport, setSubmittingReport] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -91,6 +102,41 @@ export default function ProductDetails() {
       );
     } finally {
       setIsOrdering(false);
+    }
+  };
+
+  const handleReport = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!product || !reportTarget || !reportReason.trim()) return;
+    const sellerId =
+      typeof product.sellerId === "object" && product.sellerId
+        ? product.sellerId._id
+        : product.sellerId;
+    const targetId = reportTarget === "product" ? product._id : sellerId;
+    if (!targetId) {
+      setReportError("The report target could not be identified.");
+      return;
+    }
+    setSubmittingReport(true);
+    setReportError("");
+    setReportMessage("");
+    try {
+      await createReport({
+        targetType: reportTarget,
+        targetId,
+        reason: reportReason.trim(),
+        details: reportDetails.trim() || undefined,
+      });
+      setReportMessage("Report submitted for admin review.");
+      setReportTarget(null);
+      setReportReason("");
+      setReportDetails("");
+    } catch (cause) {
+      setReportError(
+        cause instanceof Error ? cause.message : "Unable to submit report."
+      );
+    } finally {
+      setSubmittingReport(false);
     }
   };
 
@@ -270,6 +316,40 @@ export default function ProductDetails() {
               </span>
             </div>
 
+            {user && user.role !== "admin" && (
+              <div className="mt-3 flex flex-wrap gap-3 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setReportTarget("product")}
+                  className="font-medium text-gray-500 underline decoration-gray-300 underline-offset-2 hover:text-red-700"
+                >
+                  Report this product
+                </button>
+                {user.id !==
+                  (typeof product.sellerId === "object" && product.sellerId
+                    ? product.sellerId._id
+                    : product.sellerId) && (
+                  <button
+                    type="button"
+                    onClick={() => setReportTarget("user")}
+                    className="font-medium text-gray-500 underline decoration-gray-300 underline-offset-2 hover:text-red-700"
+                  >
+                    Report seller
+                  </button>
+                )}
+              </div>
+            )}
+            {reportMessage && (
+              <p role="status" className="mt-2 text-sm text-emerald-700">
+                {reportMessage}
+              </p>
+            )}
+            {reportError && (
+              <p role="alert" className="mt-2 text-sm text-red-600">
+                {reportError}
+              </p>
+            )}
+
             <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
               <h2 className="text-sm font-semibold text-gray-900">
                 Place your order
@@ -339,6 +419,64 @@ export default function ProductDetails() {
             </div>
           </div>
         </section>
+
+        {reportTarget && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4">
+            <form
+              onSubmit={handleReport}
+              className="w-full max-w-lg space-y-4 rounded-2xl bg-white p-5 shadow-xl sm:p-6"
+            >
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Report {reportTarget === "product" ? "product" : "seller"}
+                </h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Your report will be reviewed by the EthioPoultry admin team.
+                </p>
+              </div>
+              <label className="block text-sm font-medium text-gray-700">
+                Reason
+                <input
+                  required
+                  minLength={3}
+                  maxLength={120}
+                  value={reportReason}
+                  onChange={(event) => setReportReason(event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5"
+                />
+              </label>
+              <label className="block text-sm font-medium text-gray-700">
+                Additional details (optional)
+                <textarea
+                  maxLength={2000}
+                  rows={4}
+                  value={reportDetails}
+                  onChange={(event) => setReportDetails(event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5"
+                />
+              </label>
+              {reportError && (
+                <p role="alert" className="text-sm text-red-600">{reportError}</p>
+              )}
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReportTarget(null)}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReport}
+                  className="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {submittingReport ? "Submitting..." : "Submit report"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* Product information tabs */}
         <section className="mt-8 rounded-2xl border border-gray-200 bg-white px-4 sm:px-6">
