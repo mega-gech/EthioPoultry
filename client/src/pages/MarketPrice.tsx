@@ -39,7 +39,7 @@ import type { SellerProduct } from "../services/sellerService";
 
 // While developing: if the backend is down or empty, show sample data
 // that matches the design. Set to false for production.
-const USE_SAMPLE_DATA_FALLBACK = true;
+const USE_SAMPLE_DATA_FALLBACK = false;
 
 const REQUEST_TIMEOUT_MS = 10000;
 
