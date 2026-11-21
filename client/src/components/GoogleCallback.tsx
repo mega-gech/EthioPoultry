@@ -21,6 +21,8 @@ export default function GoogleCallback() {
           navigate("/buyer/dashboard", { replace: true });
         } else if (currentUser.role === "seller") {
           navigate("/seller/dashboard", { replace: true });
+        } else if (currentUser.role === "admin") {
+          navigate("/admin/dashboard", { replace: true });
         } else {
           navigate("/", { replace: true });
         }
